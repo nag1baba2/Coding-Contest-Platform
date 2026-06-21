@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Coding Contest Platform</title>
+</head>
+<body>
+  <script>
+    // Entry point - just routes to the right page based on session state.
+    const token = sessionStorage.getItem('contest_platform_token');
+    window.location.href = token ? 'pages/contests.html' : 'pages/login.html';
+  </script>
+</body>
+</html>

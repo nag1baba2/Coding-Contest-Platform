@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Environment files - contain real DB passwords / JWT secrets, never commit
+.env
+.env.local
+e2e/.env
+backend/.env
+
+# Logs
+npm-debug.log*
+*.log
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Test artifacts
+e2e/allure-results/
+e2e/allure-report/

@@ -1,0 +1,25 @@
+{
+  "name": "contest-platform-e2e",
+  "version": "1.0.0",
+  "description": "Selenium/WebDriverIO end-to-end tests for the Coding Contest Platform frontend",
+  "scripts": {
+    "test": "node run-sequential.js",
+    "test:parallel": "wdio run wdio.conf.js"
+  },
+  "config": {
+    "chromedriver_detect_chromedriver_version": "true"
+  },
+  "devDependencies": {
+    "@wdio/cli": "^8.39.0",
+    "@wdio/local-runner": "^8.39.0",
+    "@wdio/mocha-framework": "^8.39.0",
+    "@wdio/spec-reporter": "^8.39.0",
+    "chromedriver": "^149.0.0",
+    "wdio-chromedriver-service": "^8.1.1"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "glob": "^10.4.5",
+    "mysql2": "^3.10.0"
+  }
+}

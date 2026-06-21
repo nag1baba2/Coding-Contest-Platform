@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contest - Coding Contest Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="contests.html" class="brand"><span class="brand-mark">&gt;</span> contest_platform</a>
+      <nav class="nav-links">
+        <a href="contests.html">Contests</a>
+        <a href="#" id="admin-link" class="hidden">Admin</a>
+      </nav>
+      <div class="user-badge">
+        <span class="role-tag" id="role-tag"></span>
+        <span id="user-name"></span>
+        <button class="btn btn-secondary btn-sm" id="logout-btn">Sign out</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="alert-box"></div>
+
+      <div class="page-header" id="contest-header">
+        <p style="color: var(--text-secondary)">Loading contest...</p>
+      </div>
+
+      <div class="panel" id="timer-panel" style="margin-bottom: 24px;">
+        <div class="timer-block">
+          <div class="timer-label">--</div>
+          <div class="timer-display">--:--:--</div>
+        </div>
+      </div>
+
+      <div id="locked-message" class="empty-state hidden">
+        <h3 id="locked-title"></h3>
+        <p id="locked-detail"></p>
+      </div>
+
+      <div id="contest-body" class="hidden">
+        <div class="section-title">Problems</div>
+        <div id="problem-list"></div>
+
+        <div class="mt-6 flex-between">
+          <div class="section-title" style="margin-bottom: 0;">Leaderboard</div>
+          <button class="btn btn-secondary btn-sm" id="refresh-leaderboard-btn">Refresh</button>
+        </div>
+        <div class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Rank</th><th>Name</th><th>Score</th><th>Last submission</th></tr>
+              </thead>
+              <tbody id="leaderboard-body">
+                <tr><td colspan="4">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    Auth.requireAuth();
+
+    const user = Auth.getUser();
+    document.getElementById('user-name').textContent = user.name;
+    const roleTag = document.getElementById('role-tag');
+    roleTag.textContent = user.role;
+    if (user.role === 'admin') {
+      roleTag.classList.add('admin');
+      document.getElementById('admin-link').classList.remove('hidden');
+      document.getElementById('admin-link').href = 'admin.html';
+    }
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      Auth.clearSession();
+      window.location.href = 'login.html';
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const contestId = params.get('id');
+    const alertBox = document.getElementById('alert-box');
+
+    if (!contestId) {
+      showAlert(alertBox, 'No contest specified.');
+    }
+
+    let stopTimer = null;
+    let mySubmissionsByQuestion = {}; // question_id -> latest submission
+
+    async function loadMySubmissions() {
+      try {
+        const subs = await Api.getMySubmissions(contestId);
+        mySubmissionsByQuestion = {};
+        // API returns newest-first; keep only the first (latest) seen
+        // per question, matching the "only latest counts" backend rule.
+        for (const s of subs) {
+          if (!(s.question_id in mySubmissionsByQuestion)) {
+            mySubmissionsByQuestion[s.question_id] = s;
+          }
+        }
+      } catch (err) {
+        // Non-fatal - submission history is supplementary, don't block
+        // the page over it.
+        mySubmissionsByQuestion = {};
+      }
+    }
+
+    async function loadProblems() {
+      const listEl = document.getElementById('problem-list');
+      try {
+        const questions = await Api.listQuestionsForStudent(contestId);
+        await loadMySubmissions();
+
+        if (questions.length === 0) {
+          listEl.innerHTML = '<div class="empty-state"><h3>No problems yet</h3><p>The admin hasn\'t added any problems to this contest.</p></div>';
+          return;
+        }
+
+        listEl.innerHTML = questions
+          .map((q) => {
+            const lastSub = mySubmissionsByQuestion[q.id];
+            const statusHtml = lastSub
+              ? `<span class="status-pill ${lastSub.is_correct ? 'correct' : 'incorrect'}">${lastSub.is_correct ? 'Accepted' : 'Wrong Answer'}</span>`
+              : '';
+            return `
+            <div class="panel problem-panel" data-question-id="${q.id}">
+              <div class="problem-header">
+                <h3>${escapeHtml(q.title)}</h3>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  ${statusHtml}
+                  <span class="points-badge">${q.points} pts</span>
+                </div>
+              </div>
+              <p style="color: var(--text-secondary); margin-bottom: 12px;">${escapeHtml(q.description)}</p>
+              ${
+                q.input_data
+                  ? `<div class="problem-section"><div class="label">Input</div><div class="code-block">${escapeHtml(q.input_data)}</div></div>`
+                  : ''
+              }
+              <div class="submit-row">
+                <input
+                  type="text"
+                  placeholder="Your answer, e.g. [0,1]"
+                  class="submit-input"
+                  value="${lastSub ? escapeHtml(lastSub.submitted_answer) : ''}"
+                />
+                <button class="btn btn-primary submit-btn">Submit</button>
+              </div>
+              <div class="submit-result" style="margin-top: 8px;"></div>
+            </div>
+          `;
+          })
+          .join('');
+
+        // Wire up submit buttons after rendering.
+        listEl.querySelectorAll('.problem-panel').forEach((panel) => {
+          const questionId = panel.dataset.questionId;
+          const input = panel.querySelector('.submit-input');
+          const btn = panel.querySelector('.submit-btn');
+          const resultEl = panel.querySelector('.submit-result');
+
+          btn.addEventListener('click', async () => {
+            const answer = input.value;
+            if (!answer.trim()) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+            resultEl.innerHTML = '';
+
+            try {
+              const res = await Api.submitAnswer(contestId, questionId, answer);
+              const pillClass = res.is_correct ? 'correct' : 'incorrect';
+              const pillLabel = res.is_correct ? 'Accepted' : 'Wrong Answer';
+              resultEl.innerHTML = `<span class="status-pill ${pillClass}">${pillLabel}</span> <span style="color: var(--text-secondary); font-size: 13px;">${res.points_awarded} pts awarded</span>`;
+
+              const headerPill = panel.querySelector('.problem-header .status-pill');
+              const newPillHtml = `<span class="status-pill ${pillClass}">${pillLabel}</span>`;
+              if (headerPill) {
+                headerPill.outerHTML = newPillHtml;
+              } else {
+                panel.querySelector('.problem-header > div').insertAdjacentHTML('afterbegin', newPillHtml);
+              }
+
+              loadLeaderboard();
+            } catch (err) {
+              resultEl.innerHTML = `<span style="color: var(--judge-reject); font-size: 13px;">${escapeHtml(err.message)}</span>`;
+            } finally {
+              btn.disabled = false;
+              btn.textContent = 'Submit';
+            }
+          });
+        });
+      } catch (err) {
+        // Most commonly a 403 from requireActiveContest (not started /
+        // ended) - that's handled by renderLockedState below, this
+        // catch is for anything else (network error, 404, etc.)
+        if (err.status !== 403) {
+          showAlert(alertBox, err.message);
+        }
+      }
+    }
+
+    async function loadLeaderboard() {
+      const tbody = document.getElementById('leaderboard-body');
+      try {
+        const rows = await Api.getLeaderboard(contestId);
+        if (rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="color: var(--text-secondary)">No submissions yet.</td></tr>';
+          return;
+        }
+        const medalClass = (rank) => (rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '');
+        tbody.innerHTML = rows
+          .map(
+            (r) => `
+          <tr>
+            <td class="rank-cell ${medalClass(r.rank)}">#${r.rank}</td>
+            <td>${escapeHtml(r.student_name)}</td>
+            <td class="score-cell">${r.total_score}</td>
+            <td style="color: var(--text-secondary); font-size: 13px;">${r.last_submission_time ? formatDateTime(r.last_submission_time) : '-'}</td>
+          </tr>
+        `
+          )
+          .join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color: var(--judge-reject)">${escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+
+    function renderLockedState(status, contest) {
+      const lockedEl = document.getElementById('locked-message');
+      const bodyEl = document.getElementById('contest-body');
+      const title = document.getElementById('locked-title');
+      const detail = document.getElementById('locked-detail');
+
+      if (status === 'active') {
+        lockedEl.classList.add('hidden');
+        bodyEl.classList.remove('hidden');
+        loadProblems();
+        loadLeaderboard();
+        return;
+      }
+
+      bodyEl.classList.add('hidden');
+      lockedEl.classList.remove('hidden');
+
+      if (status === 'upcoming') {
+        title.textContent = "This contest hasn't started yet";
+        detail.textContent = `Problems unlock at ${formatDateTime(contest.start_time)}.`;
+      } else {
+        title.textContent = 'This contest has ended';
+        detail.textContent = 'Submissions are closed. You can still view the leaderboard below.';
+        bodyEl.classList.remove('hidden');
+        document.getElementById('problem-list').innerHTML = '';
+        loadLeaderboard();
+      }
+    }
+
+    async function init() {
+      try {
+        const contest = await Api.getContest(contestId);
+        document.getElementById('contest-header').innerHTML = `
+          <h1>${escapeHtml(contest.name)}</h1>
+          ${contest.description ? `<p>${escapeHtml(contest.description)}</p>` : ''}
+        `;
+
+        const timerPanel = document.getElementById('timer-panel');
+        stopTimer = startCountdown(timerPanel, contest.start_time, contest.end_time, (status) => {
+          renderLockedState(status, contest);
+        });
+
+        document.getElementById('refresh-leaderboard-btn').addEventListener('click', loadLeaderboard);
+      } catch (err) {
+        showAlert(alertBox, err.message);
+      }
+    }
+
+    init();
+
+    window.addEventListener('beforeunload', () => {
+      if (stopTimer) stopTimer();
+    });
+  </script>
+</body>
+</html>

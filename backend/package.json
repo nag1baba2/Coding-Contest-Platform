@@ -1,0 +1,27 @@
+{
+  "name": "contest-platform-backend",
+  "version": "1.0.0",
+  "description": "Coding Contest Platform - Phase 1 Backend",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "test:unit": "jest --runInBand contestTime.test.js scoring.test.js",
+    "test:integration": "cross-env NODE_ENV=test jest --runInBand integration"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.10.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.0",
+    "supertest": "^7.0.0"
+  }
+}

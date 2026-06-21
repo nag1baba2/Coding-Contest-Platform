@@ -1,0 +1,766 @@
+/* ============================================================
+   Coding Contest Platform - Design System
+   ============================================================
+   Aesthetic: judge-system / competitive-programming environment.
+   Dark, focused, monospace-forward - leans into the actual subject
+   (contests, timers, accept/reject states) rather than generic
+   SaaS-dashboard styling.
+   ============================================================ */
+
+:root {
+  --bg-void: #0d1117;
+  --bg-panel: #161b22;
+  --bg-panel-raised: #1c2128;
+  --border-subtle: #30363d;
+  --border-strong: #484f58;
+
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-faint: #57606a;
+
+  --accent-blue: #58a6ff;
+  --accent-blue-dim: #1f6feb;
+  --judge-accept: #39d353;
+  --judge-accept-bg: rgba(57, 211, 83, 0.12);
+  --judge-reject: #f85149;
+  --judge-reject-bg: rgba(248, 81, 73, 0.12);
+  --judge-pending: #d29922;
+  --judge-pending-bg: rgba(210, 153, 34, 0.12);
+
+  --font-display: 'JetBrains Mono', 'Courier New', monospace;
+  --font-body: 'Inter', -apple-system, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Layout primitives
+   ============================================================ */
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-8);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.brand-mark {
+  color: var(--judge-accept);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.nav-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.15s ease;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  color: var(--text-primary);
+}
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.role-tag {
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.role-tag.admin {
+  border-color: var(--judge-pending);
+  color: var(--judge-pending);
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-8);
+}
+
+.page-header {
+  margin-bottom: var(--space-8);
+}
+
+.page-header h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.page-header p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+
+.btn {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-primary {
+  background: var(--accent-blue-dim);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--accent-blue);
+}
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-panel-raised);
+  border-color: var(--text-secondary);
+}
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--judge-reject);
+  color: var(--judge-reject);
+}
+
+.btn-danger:hover {
+  background: var(--judge-reject-bg);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* ============================================================
+   Forms
+   ============================================================ */
+
+.field {
+  margin-bottom: var(--space-4);
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  background: var(--bg-void);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  transition: border-color 0.15s ease;
+  /* Chrome renders the datetime-local picker icon (and other native
+     controls) in a dark color by default, assuming a light background.
+     On our dark bg-void background that icon is effectively invisible
+     and unclickable-looking, even though it's technically still there.
+     color-scheme: dark tells the browser to use its light-on-dark
+     variant of native form controls instead. */
+  color-scheme: dark;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: var(--accent-blue);
+}
+
+.field textarea {
+  font-family: var(--font-display);
+  font-size: 13px;
+  min-height: 100px;
+  resize: vertical;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: var(--space-1);
+}
+
+/* ============================================================
+   Cards / panels
+   ============================================================ */
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+}
+
+.auth-shell {
+  max-width: 380px;
+  margin: 80px auto;
+}
+
+.auth-shell .panel {
+  padding: var(--space-8);
+}
+
+.auth-shell h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin-bottom: var(--space-1);
+}
+
+.auth-shell .subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: var(--space-6);
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: var(--space-4);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.auth-switch a {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+
+/* ============================================================
+   Status pills - signature visual language. Mirrors real
+   judge-system conventions (Accepted/Wrong Answer) so the
+   active/upcoming/ended and correct/incorrect states read
+   instantly, the way they would on Codeforces/LeetCode.
+   ============================================================ */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+
+.status-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-pill.active {
+  background: var(--judge-accept-bg);
+  color: var(--judge-accept);
+}
+
+.status-pill.upcoming {
+  background: var(--judge-pending-bg);
+  color: var(--judge-pending);
+}
+
+.status-pill.ended {
+  background: rgba(139, 148, 158, 0.12);
+  color: var(--text-secondary);
+}
+
+.status-pill.correct {
+  background: var(--judge-accept-bg);
+  color: var(--judge-accept);
+}
+
+.status-pill.incorrect {
+  background: var(--judge-reject-bg);
+  color: var(--judge-reject);
+}
+
+/* ============================================================
+   Contest list / cards
+   ============================================================ */
+
+.contest-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.contest-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  text-decoration: none;
+  color: var(--text-primary);
+  display: block;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+  cursor: pointer;
+}
+
+.contest-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.contest-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.contest-card h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: var(--space-1);
+}
+
+.contest-card .meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.contest-card .meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.contest-card .actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* ============================================================
+   Countdown timer - signature element. Live, ticking, and
+   visually shifts state as a contest's actual lifecycle
+   progresses - the core mechanic of the product.
+   ============================================================ */
+
+.timer-block {
+  font-family: var(--font-display);
+  text-align: center;
+  padding: var(--space-6);
+}
+
+.timer-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.timer-display {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.timer-display.urgent {
+  color: var(--judge-reject);
+}
+
+/* ============================================================
+   Question / problem view
+   ============================================================ */
+
+.problem-panel {
+  margin-bottom: var(--space-4);
+}
+
+.problem-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+  gap: var(--space-3);
+}
+
+.problem-header h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+
+.points-badge {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--judge-pending);
+  border: 1px solid var(--judge-pending);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.problem-section {
+  margin-bottom: var(--space-4);
+}
+
+.problem-section .label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  margin-bottom: var(--space-1);
+}
+
+.code-block {
+  background: var(--bg-void);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--judge-accept);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.submit-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.submit-row input {
+  flex: 1;
+}
+
+/* ============================================================
+   Tables (leaderboard, submissions, stats)
+   ============================================================ */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 14px;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+.rank-cell {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.rank-cell.gold { color: #e3b341; }
+.rank-cell.silver { color: #c9d1d9; }
+.rank-cell.bronze { color: #cc8c5c; }
+
+.score-cell {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--judge-accept);
+}
+
+/* ============================================================
+   Stat cards (admin contest stats page)
+   ============================================================ */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.stat-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.stat-card .stat-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--judge-accept);
+}
+
+.stat-card .stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: var(--space-1);
+}
+
+/* ============================================================
+   Alerts / empty states / errors
+   ============================================================ */
+
+.alert {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  margin-bottom: var(--space-4);
+}
+
+.alert-error {
+  background: var(--judge-reject-bg);
+  border: 1px solid var(--judge-reject);
+  color: var(--judge-reject);
+}
+
+.alert-success {
+  background: var(--judge-accept-bg);
+  border: 1px solid var(--judge-accept);
+  color: var(--judge-accept);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  color: var(--text-secondary);
+}
+
+.empty-state h3 {
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+/* ============================================================
+   Modal (used for admin add-question form)
+   ============================================================ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 100;
+}
+
+.modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal h2 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin-bottom: var(--space-4);
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-6);
+}
+
+/* ============================================================
+   Utility
+   ============================================================ */
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mt-6 {
+  margin-top: var(--space-6);
+}
+
+.mb-6 {
+  margin-bottom: var(--space-6);
+}
+
+@media (max-width: 600px) {
+  main {
+    padding: var(--space-4);
+  }
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+  .topbar {
+    padding: var(--space-3) var(--space-4);
+  }
+}

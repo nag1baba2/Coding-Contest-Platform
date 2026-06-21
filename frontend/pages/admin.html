@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Coding Contest Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="contests.html" class="brand"><span class="brand-mark">&gt;</span> contest_platform</a>
+      <nav class="nav-links">
+        <a href="contests.html">Contests</a>
+        <a href="admin.html" class="active">Admin</a>
+      </nav>
+      <div class="user-badge">
+        <span class="role-tag admin" id="role-tag">admin</span>
+        <span id="user-name"></span>
+        <button class="btn btn-secondary btn-sm" id="logout-btn">Sign out</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="page-header flex-between">
+        <div>
+          <h1>Admin panel</h1>
+          <p>Create contests, manage problems, review activity.</p>
+        </div>
+        <button class="btn btn-primary" id="new-contest-btn">+ New contest</button>
+      </div>
+
+      <div id="alert-box"></div>
+      <div id="contest-list" class="contest-grid">
+        <p style="color: var(--text-secondary)">Loading contests...</p>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay hidden" id="contest-modal-overlay">
+    <div class="modal">
+      <h2 id="contest-modal-title">New contest</h2>
+      <form id="contest-form">
+        <input type="hidden" id="contest-form-id" />
+        <div class="field">
+          <label for="contest-name">Name</label>
+          <input type="text" id="contest-name" required />
+        </div>
+        <div class="field">
+          <label for="contest-description">Description (optional)</label>
+          <textarea id="contest-description" style="font-family: var(--font-body); min-height: 60px;"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="contest-start">Start time</label>
+            <input type="datetime-local" id="contest-start" required />
+          </div>
+          <div class="field">
+            <label for="contest-end">End time</label>
+            <input type="datetime-local" id="contest-end" required />
+          </div>
+        </div>
+        <div id="contest-form-error"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="contest-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="contest-modal-save">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="problems-list-modal-overlay">
+    <div class="modal" style="max-width: 600px;">
+      <div class="flex-between" style="margin-bottom: 16px;">
+        <h2 style="margin-bottom: 0;">Problems</h2>
+        <button type="button" class="btn btn-primary btn-sm" id="add-problem-btn">+ Add problem</button>
+      </div>
+      <div id="problems-list-body"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="problems-list-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="question-modal-overlay">
+    <div class="modal">
+      <h2 id="question-modal-title">Add problem</h2>
+      <form id="question-form">
+        <input type="hidden" id="question-form-id" />
+        <input type="hidden" id="question-form-contest-id" />
+        <div class="field">
+          <label for="question-title">Title</label>
+          <input type="text" id="question-title" required />
+        </div>
+        <div class="field">
+          <label for="question-description">Description</label>
+          <textarea id="question-description" style="font-family: var(--font-body);" required></textarea>
+        </div>
+        <div class="field">
+          <label for="question-input">Input (optional, shown to students)</label>
+          <textarea id="question-input"></textarea>
+        </div>
+        <div class="field">
+          <label for="question-expected">Expected output (the answer key - never shown to students)</label>
+          <textarea id="question-expected" required></textarea>
+        </div>
+        <div class="field">
+          <label for="question-points">Points</label>
+          <input type="number" id="question-points" min="1" value="10" required />
+        </div>
+        <div id="question-form-error"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="question-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="question-modal-save">Add problem</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    Auth.requireAuth({ adminOnly: true });
+
+    const user = Auth.getUser();
+    document.getElementById('user-name').textContent = user.name;
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      Auth.clearSession();
+      window.location.href = 'login.html';
+    });
+
+    const listEl = document.getElementById('contest-list');
+    const alertBox = document.getElementById('alert-box');
+    let contestsCache = [];
+
+    async function loadContests() {
+      try {
+        contestsCache = await Api.listContests();
+
+        if (contestsCache.length === 0) {
+          listEl.innerHTML = `
+            <div class="empty-state">
+              <h3>No contests yet</h3>
+              <p>Create your first contest to get started.</p>
+            </div>
+          `;
+          return;
+        }
+
+        listEl.innerHTML = contestsCache
+          .map(
+            (c) => `
+          <div class="contest-card" data-id="${c.id}">
+            <div class="contest-card-top">
+              <div>
+                <h3>${escapeHtml(c.name)}</h3>
+              </div>
+              ${statusPillHtml(c.status)}
+            </div>
+            <div class="meta">
+              <span>Starts ${formatDateTime(c.start_time)}</span>
+              <span>Ends ${formatDateTime(c.end_time)}</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-secondary btn-sm manage-questions-btn" data-id="${c.id}">Problems</button>
+              <a class="btn btn-secondary btn-sm" href="contest-stats.html?id=${c.id}">Stats</a>
+              <button class="btn btn-secondary btn-sm edit-contest-btn" data-id="${c.id}">Edit</button>
+              <button class="btn btn-danger btn-sm delete-contest-btn" data-id="${c.id}">Delete</button>
+            </div>
+          </div>
+        `
+          )
+          .join('');
+
+        wireCardActions();
+      } catch (err) {
+        showAlert(alertBox, err.message);
+      }
+    }
+
+    function wireCardActions() {
+      listEl.querySelectorAll('.edit-contest-btn').forEach((btn) => {
+        btn.addEventListener('click', () => openContestModal(btn.dataset.id));
+      });
+      listEl.querySelectorAll('.delete-contest-btn').forEach((btn) => {
+        btn.addEventListener('click', () => deleteContest(btn.dataset.id));
+      });
+      listEl.querySelectorAll('.manage-questions-btn').forEach((btn) => {
+        btn.addEventListener('click', () => openProblemsListModal(btn.dataset.id));
+      });
+    }
+
+    async function deleteContest(id) {
+      const contest = contestsCache.find((c) => String(c.id) === String(id));
+      const confirmed = confirm(
+        `Delete "${contest ? contest.name : 'this contest'}"? This also removes its problems and all submissions. This cannot be undone.`
+      );
+      if (!confirmed) return;
+
+      try {
+        await Api.deleteContest(id);
+        loadContests();
+      } catch (err) {
+        showAlert(alertBox, err.message);
+      }
+    }
+
+    const contestModalOverlay = document.getElementById('contest-modal-overlay');
+    const contestForm = document.getElementById('contest-form');
+    const contestFormError = document.getElementById('contest-form-error');
+
+    // The <input type="datetime-local"> picker always represents
+    // whatever the admin types as LOCAL time (no timezone info is
+    // attached to the value itself). The backend stores and returns
+    // UTC-labeled timestamps (see db.js timezone: 'Z'). These two
+    // helpers are the single place that conversion happens, so it's
+    // applied consistently on both the way in (create/update) and the
+    // way out (pre-filling the edit form) - getting this wrong in only
+    // one direction is exactly what caused the 5:30 offset bug.
+
+    // UTC ISO string (from the API) -> local "YYYY-MM-DDTHH:MM" for
+    // pre-filling the datetime-local input.
+    function isoToLocalInputValue(isoString) {
+      const d = new Date(isoString);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    // Local "YYYY-MM-DDTHH:MM" (from the datetime-local input) -> UTC
+    // ISO string to send to the backend. new Date('YYYY-MM-DDTHH:MM')
+    // (no timezone suffix) is interpreted by the browser as local time,
+    // exactly matching what the admin saw in the picker - so this is
+    // the correct, deliberate use of that parsing behavior, not an
+    // accident.
+    function localInputValueToIso(localValue) {
+      return new Date(localValue).toISOString();
+    }
+
+    function openContestModal(id = null) {
+      contestFormError.innerHTML = '';
+      contestForm.reset();
+      document.getElementById('contest-form-id').value = id || '';
+
+      if (id) {
+        const contest = contestsCache.find((c) => String(c.id) === String(id));
+        document.getElementById('contest-modal-title').textContent = 'Edit contest';
+        document.getElementById('contest-name').value = contest.name;
+        document.getElementById('contest-description').value = contest.description || '';
+        document.getElementById('contest-start').value = isoToLocalInputValue(contest.start_time);
+        document.getElementById('contest-end').value = isoToLocalInputValue(contest.end_time);
+      } else {
+        document.getElementById('contest-modal-title').textContent = 'New contest';
+      }
+
+      contestModalOverlay.classList.remove('hidden');
+    }
+
+    function closeContestModal() {
+      contestModalOverlay.classList.add('hidden');
+    }
+
+    document.getElementById('new-contest-btn').addEventListener('click', () => openContestModal());
+    document.getElementById('contest-modal-cancel').addEventListener('click', closeContestModal);
+
+    contestForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      contestFormError.innerHTML = '';
+
+      const id = document.getElementById('contest-form-id').value;
+      const payload = {
+        name: document.getElementById('contest-name').value.trim(),
+        description: document.getElementById('contest-description').value.trim(),
+        start_time: localInputValueToIso(document.getElementById('contest-start').value),
+        end_time: localInputValueToIso(document.getElementById('contest-end').value),
+      };
+
+      try {
+        if (id) {
+          await Api.updateContest(id, payload);
+        } else {
+          await Api.createContest(payload);
+        }
+        closeContestModal();
+        loadContests();
+      } catch (err) {
+        contestFormError.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      }
+    });
+
+    const problemsListOverlay = document.getElementById('problems-list-modal-overlay');
+    const problemsListBody = document.getElementById('problems-list-body');
+    let currentProblemsContestId = null;
+    let problemsCache = [];
+
+    async function openProblemsListModal(contestId) {
+      currentProblemsContestId = contestId;
+      problemsListBody.innerHTML = '<p style="color: var(--text-secondary)">Loading...</p>';
+      problemsListOverlay.classList.remove('hidden');
+      await refreshProblemsList();
+    }
+
+    async function refreshProblemsList() {
+      try {
+        problemsCache = await Api.listQuestionsForAdmin(currentProblemsContestId);
+
+        if (problemsCache.length === 0) {
+          problemsListBody.innerHTML = '<div class="empty-state"><h3>No problems yet</h3><p>Click "Add problem" to create one.</p></div>';
+          return;
+        }
+
+        problemsListBody.innerHTML = problemsCache
+          .map(
+            (q) => `
+          <div class="panel" style="margin-bottom: 8px; padding: 12px 16px;">
+            <div class="flex-between">
+              <div>
+                <strong>${escapeHtml(q.title)}</strong>
+                <span class="points-badge" style="margin-left: 8px;">${q.points} pts</span>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-secondary btn-sm edit-problem-btn" data-id="${q.id}">Edit</button>
+                <button class="btn btn-danger btn-sm delete-problem-btn" data-id="${q.id}">Delete</button>
+              </div>
+            </div>
+          </div>
+        `
+          )
+          .join('');
+
+        problemsListBody.querySelectorAll('.edit-problem-btn').forEach((btn) => {
+          btn.addEventListener('click', () => openQuestionModal(currentProblemsContestId, btn.dataset.id));
+        });
+        problemsListBody.querySelectorAll('.delete-problem-btn').forEach((btn) => {
+          btn.addEventListener('click', () => deleteProblem(btn.dataset.id));
+        });
+      } catch (err) {
+        problemsListBody.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    async function deleteProblem(questionId) {
+      const q = problemsCache.find((p) => String(p.id) === String(questionId));
+      const confirmed = confirm(`Delete "${q ? q.title : 'this problem'}"? This also removes any submissions for it.`);
+      if (!confirmed) return;
+
+      try {
+        await Api.deleteQuestion(questionId);
+        refreshProblemsList();
+      } catch (err) {
+        problemsListBody.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>` + problemsListBody.innerHTML;
+      }
+    }
+
+    document.getElementById('problems-list-close').addEventListener('click', () => {
+      problemsListOverlay.classList.add('hidden');
+      // Contest cards show problem counts indirectly via stats, not
+      // directly - but refresh anyway in case anything else depends on
+      // current contest data.
+      loadContests();
+    });
+
+    document.getElementById('add-problem-btn').addEventListener('click', () => {
+      openQuestionModal(currentProblemsContestId, null);
+    });
+
+    const questionModalOverlay = document.getElementById('question-modal-overlay');
+    const questionForm = document.getElementById('question-form');
+    const questionFormError = document.getElementById('question-form-error');
+
+    function openQuestionModal(contestId, questionId = null) {
+      questionFormError.innerHTML = '';
+      questionForm.reset();
+      document.getElementById('question-form-contest-id').value = contestId;
+      document.getElementById('question-form-id').value = questionId || '';
+
+      if (questionId) {
+        const q = problemsCache.find((p) => String(p.id) === String(questionId));
+        document.getElementById('question-modal-title').textContent = 'Edit problem';
+        document.getElementById('question-modal-save').textContent = 'Save changes';
+        document.getElementById('question-title').value = q.title;
+        document.getElementById('question-description').value = q.description;
+        document.getElementById('question-input').value = q.input_data || '';
+        document.getElementById('question-expected').value = q.expected_output;
+        document.getElementById('question-points').value = q.points;
+      } else {
+        document.getElementById('question-modal-title').textContent = 'Add problem';
+        document.getElementById('question-modal-save').textContent = 'Add problem';
+        document.getElementById('question-points').value = 10;
+      }
+
+      questionModalOverlay.classList.remove('hidden');
+    }
+
+    document.getElementById('question-modal-cancel').addEventListener('click', () => {
+      questionModalOverlay.classList.add('hidden');
+    });
+
+    questionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      questionFormError.innerHTML = '';
+
+      const contestId = document.getElementById('question-form-contest-id').value;
+      const questionId = document.getElementById('question-form-id').value;
+      const payload = {
+        contest_id: Number(contestId),
+        title: document.getElementById('question-title').value.trim(),
+        description: document.getElementById('question-description').value.trim(),
+        input_data: document.getElementById('question-input').value.trim(),
+        expected_output: document.getElementById('question-expected').value.trim(),
+        points: Number(document.getElementById('question-points').value),
+      };
+
+      try {
+        if (questionId) {
+          await Api.updateQuestion(questionId, payload);
+        } else {
+          await Api.createQuestion(payload);
+        }
+        // Refresh the list BEFORE hiding the modal - otherwise there's
+        // a brief window where the modal is gone but the list behind
+        // it still shows stale (pre-add/edit) data, which is both a
+        // minor UX flash and something E2E tests can race against if
+        // they only wait for the modal to disappear.
+        await refreshProblemsList();
+        questionModalOverlay.classList.add('hidden');
+        questionForm.reset();
+      } catch (err) {
+        questionFormError.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      }
+    });
+
+    loadContests();
+  </script>
+</body>
+</html>

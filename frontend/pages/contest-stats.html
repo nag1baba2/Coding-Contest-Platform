@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contest stats - Coding Contest Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="contests.html" class="brand"><span class="brand-mark">&gt;</span> contest_platform</a>
+      <nav class="nav-links">
+        <a href="contests.html">Contests</a>
+        <a href="admin.html" class="active">Admin</a>
+      </nav>
+      <div class="user-badge">
+        <span class="role-tag admin">admin</span>
+        <span id="user-name"></span>
+        <button class="btn btn-secondary btn-sm" id="logout-btn">Sign out</button>
+      </div>
+    </header>
+
+    <main>
+      <a href="admin.html" style="color: var(--text-secondary); font-size: 13px; text-decoration: none;">&larr; Back to admin panel</a>
+
+      <div class="page-header mt-6" id="page-header">
+        <p style="color: var(--text-secondary)">Loading...</p>
+      </div>
+
+      <div id="alert-box"></div>
+
+      <div class="stat-grid" id="stat-grid"></div>
+
+      <div class="section-title">Problem breakdown</div>
+      <div class="panel mb-6">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Problem</th><th>Solved by</th></tr>
+            </thead>
+            <tbody id="problem-stats-body">
+              <tr><td colspan="2">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex-between">
+        <div class="section-title" style="margin-bottom: 0;">All submissions</div>
+      </div>
+      <div class="panel">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Student</th><th>Problem</th><th>Answer</th><th>Result</th><th>Submitted</th></tr>
+            </thead>
+            <tbody id="submissions-body">
+              <tr><td colspan="5">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    Auth.requireAuth({ adminOnly: true });
+    document.getElementById('user-name').textContent = Auth.getUser().name;
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      Auth.clearSession();
+      window.location.href = 'login.html';
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const contestId = params.get('id');
+    const alertBox = document.getElementById('alert-box');
+
+    async function load() {
+      try {
+        const [contest, stats, submissions] = await Promise.all([
+          Api.getContest(contestId),
+          Api.getStats(contestId),
+          Api.getAllSubmissions(contestId),
+        ]);
+
+        document.getElementById('page-header').innerHTML = `
+          <h1>${escapeHtml(contest.name)}</h1>
+          <p>Contest statistics and submission log</p>
+        `;
+
+        document.getElementById('stat-grid').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-value">${stats.participants}</div>
+            <div class="stat-label">Participants</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.total_submissions}</div>
+            <div class="stat-label">Submissions</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.most_solved ? escapeHtml(stats.most_solved.title) : '-'}</div>
+            <div class="stat-label">Most solved</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.least_solved ? escapeHtml(stats.least_solved.title) : '-'}</div>
+            <div class="stat-label">Least solved</div>
+          </div>
+        `;
+
+        const problemBody = document.getElementById('problem-stats-body');
+        if (stats.all_questions.length === 0) {
+          problemBody.innerHTML = '<tr><td colspan="2" style="color: var(--text-secondary)">No problems in this contest yet.</td></tr>';
+        } else {
+          problemBody.innerHTML = stats.all_questions
+            .map(
+              (q) => `
+            <tr>
+              <td>${escapeHtml(q.title)}</td>
+              <td>${q.solve_count} student${q.solve_count === 1 ? '' : 's'}</td>
+            </tr>
+          `
+            )
+            .join('');
+        }
+
+        const subBody = document.getElementById('submissions-body');
+        if (submissions.length === 0) {
+          subBody.innerHTML = '<tr><td colspan="5" style="color: var(--text-secondary)">No submissions yet.</td></tr>';
+        } else {
+          subBody.innerHTML = submissions
+            .map(
+              (s) => `
+            <tr>
+              <td>${escapeHtml(s.student_name)}</td>
+              <td>${escapeHtml(s.question_title)}</td>
+              <td class="code-block" style="display:inline-block; padding: 2px 8px;">${escapeHtml(s.submitted_answer)}</td>
+              <td><span class="status-pill ${s.is_correct ? 'correct' : 'incorrect'}">${s.is_correct ? 'Accepted' : 'Wrong'}</span></td>
+              <td style="color: var(--text-secondary); font-size: 13px;">${formatDateTime(s.created_at)}</td>
+            </tr>
+          `
+            )
+            .join('');
+        }
+      } catch (err) {
+        showAlert(alertBox, err.message);
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contests - Coding Contest Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="contests.html" class="brand"><span class="brand-mark">&gt;</span> contest_platform</a>
+      <nav class="nav-links">
+        <a href="contests.html" class="active">Contests</a>
+        <a href="#" id="admin-link" class="hidden">Admin</a>
+      </nav>
+      <div class="user-badge">
+        <span class="role-tag" id="role-tag"></span>
+        <span id="user-name"></span>
+        <button class="btn btn-secondary btn-sm" id="logout-btn">Sign out</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="page-header">
+        <h1>Contests</h1>
+        <p>Pick a contest, solve problems, climb the leaderboard.</p>
+      </div>
+
+      <div id="alert-box"></div>
+      <div id="contest-list" class="contest-grid">
+        <p style="color: var(--text-secondary)">Loading contests...</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    Auth.requireAuth();
+
+    const user = Auth.getUser();
+    document.getElementById('user-name').textContent = user.name;
+    const roleTag = document.getElementById('role-tag');
+    roleTag.textContent = user.role;
+    if (user.role === 'admin') {
+      roleTag.classList.add('admin');
+      document.getElementById('admin-link').classList.remove('hidden');
+      document.getElementById('admin-link').href = 'admin.html';
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      Auth.clearSession();
+      window.location.href = 'login.html';
+    });
+
+    const listEl = document.getElementById('contest-list');
+    const alertBox = document.getElementById('alert-box');
+
+    async function loadContests() {
+      try {
+        const contests = await Api.listContests();
+
+        if (contests.length === 0) {
+          listEl.innerHTML = `
+            <div class="empty-state">
+              <h3>No contests yet</h3>
+              <p>Check back soon, or ask an admin to create one.</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Most relevant first: active, then upcoming, then ended -
+        // rather than raw chronological order, so students land on
+        // what they can actually act on right now.
+        const order = { active: 0, upcoming: 1, ended: 2 };
+        contests.sort((a, b) => order[a.status] - order[b.status]);
+
+        listEl.innerHTML = contests
+          .map(
+            (c) => `
+          <a class="contest-card" href="contest-detail.html?id=${c.id}">
+            <div class="contest-card-top">
+              <div>
+                <h3>${escapeHtml(c.name)}</h3>
+              </div>
+              ${statusPillHtml(c.status)}
+            </div>
+            <div class="meta">
+              <span>Starts ${formatDateTime(c.start_time)}</span>
+              <span>Ends ${formatDateTime(c.end_time)}</span>
+            </div>
+          </a>
+        `
+          )
+          .join('');
+      } catch (err) {
+        showAlert(alertBox, err.message);
+        listEl.innerHTML = '';
+      }
+    }
+
+    loadContests();
+  </script>
+</body>
+</html>
