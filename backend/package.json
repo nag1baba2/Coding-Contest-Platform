@@ -9,6 +9,7 @@
     "test": "cross-env NODE_ENV=test jest --runInBand",
     "test:unit": "jest --runInBand contestTime.test.js scoring.test.js",
     "test:integration": "cross-env NODE_ENV=test jest --runInBand integration"
+    "test:ci": "cross-env NODE_ENV=test jest --runInBand --forceExit"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

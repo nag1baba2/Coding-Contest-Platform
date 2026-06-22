@@ -54,7 +54,7 @@ jobs:
         run: mysql -h 127.0.0.1 -u root -proot_test_password contest_platform_test < src/config/schema.test.sql
 
       - name: Run full test suite (unit + integration)
-        run: npm test
+        run: npm run test:ci
 
   e2e:
     runs-on: ubuntu-latest
