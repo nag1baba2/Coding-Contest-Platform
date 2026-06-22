@@ -32,7 +32,7 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_USER: root
       DB_PASSWORD: root_test_password
-      DB_NAME: contest_platform_test
+      DB_NAME: contest_platform
       JWT_SECRET: ci_test_secret_not_for_production
       JWT_EXPIRES_IN: 24h
 
