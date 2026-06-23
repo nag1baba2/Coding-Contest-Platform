@@ -524,6 +524,35 @@ main {
   white-space: nowrap;
 }
 
+.difficulty-badge {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.difficulty-badge.easy {
+  color: var(--judge-accept);
+  border: 1px solid var(--judge-accept);
+  background: var(--judge-accept-bg);
+}
+
+.difficulty-badge.medium {
+  color: var(--judge-pending);
+  border: 1px solid var(--judge-pending);
+  background: var(--judge-pending-bg);
+}
+
+.difficulty-badge.hard {
+  color: var(--judge-reject);
+  border: 1px solid var(--judge-reject);
+  background: var(--judge-reject-bg);
+}
+
 .problem-section {
   margin-bottom: var(--space-4);
 }

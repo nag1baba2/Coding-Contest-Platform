@@ -69,6 +69,12 @@
   <script src="../js/api.js"></script>
   <script src="../js/utils.js"></script>
   <script>
+    function difficultyBadge(points) {
+      if (points <= 10) return '<span class="difficulty-badge easy">Easy</span>';
+      if (points <= 20) return '<span class="difficulty-badge medium">Medium</span>';
+      return '<span class="difficulty-badge hard">Hard</span>';
+    }
+
     Auth.requireAuth();
 
     const user = Auth.getUser();
@@ -138,6 +144,7 @@
                 <h3>${escapeHtml(q.title)}</h3>
                 <div style="display:flex; gap:8px; align-items:center;">
                   ${statusHtml}
+                  ${difficultyBadge(q.points)}
                   <span class="points-badge">${q.points} pts</span>
                 </div>
               </div>
