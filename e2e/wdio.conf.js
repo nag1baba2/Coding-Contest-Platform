@@ -54,6 +54,10 @@ exports.config = {
 
     mochaOpts: {
         ui: 'bdd',
-        timeout: 30000,
+        // 120s: the time-gating spec waits up to 90s for a real wall-clock
+        // minute boundary to pass (contest start rounds to the next minute
+        // in datetime-local inputs). 30s was too short and caused Mocha to
+        // kill the test before the waitUntil could complete.
+        timeout: 120000,
     },
 };
