@@ -609,6 +609,15 @@ tr:last-child td {
   color: var(--judge-accept);
 }
 
+.leaderboard-own-row td {
+  background: rgba(88, 166, 255, 0.06);
+  border-bottom-color: var(--border-subtle);
+}
+
+.leaderboard-own-row td:first-child {
+  border-left: 3px solid var(--accent-blue);
+}
+
 /* ============================================================
    Stat cards (admin contest stats page)
    ============================================================ */

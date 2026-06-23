@@ -94,6 +94,7 @@
     }
 
     let stopTimer = null;
+    let leaderboardRefreshInterval = null;
     let mySubmissionsByQuestion = {}; // question_id -> latest submission
 
     async function loadMySubmissions() {
@@ -221,9 +222,9 @@
         tbody.innerHTML = rows
           .map(
             (r) => `
-          <tr>
+          <tr class="${r.student_id === user.id ? 'leaderboard-own-row' : ''}">
             <td class="rank-cell ${medalClass(r.rank)}">#${r.rank}</td>
-            <td>${escapeHtml(r.student_name)}</td>
+            <td>${escapeHtml(r.student_name)}${r.student_id === user.id ? ' <span style="color:var(--accent-blue);font-size:12px;">(you)</span>' : ''}</td>
             <td class="score-cell">${r.total_score}</td>
             <td style="color: var(--text-secondary); font-size: 13px;">${r.last_submission_time ? formatDateTime(r.last_submission_time) : '-'}</td>
           </tr>
@@ -246,7 +247,15 @@
         bodyEl.classList.remove('hidden');
         loadProblems();
         loadLeaderboard();
+        if (!leaderboardRefreshInterval) {
+          leaderboardRefreshInterval = setInterval(loadLeaderboard, 30000);
+        }
         return;
+      }
+
+      if (leaderboardRefreshInterval) {
+        clearInterval(leaderboardRefreshInterval);
+        leaderboardRefreshInterval = null;
       }
 
       bodyEl.classList.add('hidden');
@@ -287,6 +296,7 @@
 
     window.addEventListener('beforeunload', () => {
       if (stopTimer) stopTimer();
+      if (leaderboardRefreshInterval) clearInterval(leaderboardRefreshInterval);
     });
   </script>
 </body>
