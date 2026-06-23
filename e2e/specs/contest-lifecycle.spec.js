@@ -101,6 +101,9 @@ describe('Full contest lifecycle', () => {
         // Contest is already active so the registration API rejects late sign-ups.
         // Insert directly into the DB to simulate pre-contest registration.
         await registerForContest(studentEmail, contestName);
+        // Reload so the contests list re-fetches registration_count (was 0
+        // when the page first loaded, causing auto-end logic to mark it "ended").
+        await browser.refresh();
 
         const card = await $(`.contest-card*=${contestName}`);
         await card.waitForDisplayed({ timeout: 5000 });
