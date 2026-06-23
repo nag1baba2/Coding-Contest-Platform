@@ -46,6 +46,15 @@ async function requireActiveContest(req, res, next) {
             });
         }
 
+        // Check if user is registered for this contest
+        const [regRows] = await pool.query(
+            'SELECT id FROM contest_registrations WHERE user_id = ? AND contest_id = ?',
+            [req.user.id, contestId]
+        );
+        if (regRows.length === 0) {
+            return res.status(403).json({ error: 'You are not registered for this contest' });
+        }
+
         req.contest = contest;
         next();
     } catch (err) {

@@ -29,14 +29,58 @@
           <h1>Admin panel</h1>
           <p>Create contests, manage problems, review activity.</p>
         </div>
-        <button class="btn btn-primary" id="new-contest-btn">+ New contest</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" id="show-users-btn">Users</button>
+          <button class="btn btn-primary" id="new-contest-btn">+ New contest</button>
+        </div>
       </div>
 
       <div id="alert-box"></div>
-      <div id="contest-list" class="contest-grid">
-        <p style="color: var(--text-secondary)">Loading contests...</p>
+
+      <!-- Contests section -->
+      <div id="contests-section">
+        <div id="contest-list" class="contest-grid">
+          <p style="color: var(--text-secondary)">Loading contests...</p>
+        </div>
+      </div>
+
+      <!-- Users section (hidden by default) -->
+      <div id="users-section" class="hidden">
+        <div class="section-title" style="margin-bottom:var(--space-4);">User points overview</div>
+        <div class="panel" style="margin-bottom:var(--space-6);overflow:hidden;">
+          <div id="points-bar-graph" class="bar-graph"></div>
+        </div>
+
+        <div class="section-title" style="margin-bottom:var(--space-4);">All users</div>
+        <div class="panel" style="padding:0;">
+          <div class="table-wrap">
+            <table id="users-table">
+              <thead>
+                <tr>
+                  <th>Name</th><th>Email</th><th>Role</th>
+                  <th>Status</th><th>Total pts</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody">
+                <tr><td colspan="6" style="color:var(--text-secondary)">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </main>
+  </div>
+
+  <!-- Generic confirm modal (replaces browser confirm()) -->
+  <div class="modal-overlay hidden" id="confirm-modal-overlay">
+    <div class="modal" style="max-width:400px;">
+      <h2 id="confirm-modal-title">Are you sure?</h2>
+      <p class="confirm-modal-message" id="confirm-modal-message"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="confirm-modal-cancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirm-modal-confirm">Delete</button>
+      </div>
+    </div>
   </div>
 
   <div class="modal-overlay hidden" id="contest-modal-overlay">
@@ -131,6 +175,46 @@
       window.location.href = 'login.html';
     });
 
+    // ── Confirm modal ─────────────────────────────────────────
+    let confirmResolve = null;
+    const confirmOverlay = document.getElementById('confirm-modal-overlay');
+
+    function showConfirm(title, message, confirmLabel = 'Delete') {
+      document.getElementById('confirm-modal-title').textContent = title;
+      document.getElementById('confirm-modal-message').textContent = message;
+      document.getElementById('confirm-modal-confirm').textContent = confirmLabel;
+      confirmOverlay.classList.remove('hidden');
+      return new Promise((resolve) => { confirmResolve = resolve; });
+    }
+
+    document.getElementById('confirm-modal-cancel').addEventListener('click', () => {
+      confirmOverlay.classList.add('hidden');
+      if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
+    });
+    document.getElementById('confirm-modal-confirm').addEventListener('click', () => {
+      confirmOverlay.classList.add('hidden');
+      if (confirmResolve) { confirmResolve(true); confirmResolve = null; }
+    });
+
+    // ── Section toggle ────────────────────────────────────────
+    const contestsSection = document.getElementById('contests-section');
+    const usersSection = document.getElementById('users-section');
+    const showUsersBtn = document.getElementById('show-users-btn');
+
+    showUsersBtn.addEventListener('click', () => {
+      const showingUsers = !usersSection.classList.contains('hidden');
+      if (showingUsers) {
+        usersSection.classList.add('hidden');
+        contestsSection.classList.remove('hidden');
+        showUsersBtn.textContent = 'Users';
+      } else {
+        usersSection.classList.remove('hidden');
+        contestsSection.classList.add('hidden');
+        showUsersBtn.textContent = 'Contests';
+        loadUsers();
+      }
+    });
+
     const listEl = document.getElementById('contest-list');
     const alertBox = document.getElementById('alert-box');
     let contestsCache = [];
@@ -194,8 +278,9 @@
 
     async function deleteContest(id) {
       const contest = contestsCache.find((c) => String(c.id) === String(id));
-      const confirmed = confirm(
-        `Delete "${contest ? contest.name : 'this contest'}"? This also removes its problems and all submissions. This cannot be undone.`
+      const confirmed = await showConfirm(
+        'Delete contest',
+        `Delete "${contest ? contest.name : 'this contest'}"? This also removes all its problems and submissions. This cannot be undone.`
       );
       if (!confirmed) return;
 
@@ -205,6 +290,86 @@
       } catch (err) {
         showAlert(alertBox, err.message);
       }
+    }
+
+    // ── User management ───────────────────────────────────────
+    async function loadUsers() {
+      const tbody = document.getElementById('users-tbody');
+      const graphEl = document.getElementById('points-bar-graph');
+      try {
+        const users = await Api.listUsers();
+
+        // Bar graph
+        const students = users.filter((u) => u.role !== 'admin');
+        const maxPts = Math.max(1, ...students.map((u) => Math.max(0, u.total_points)));
+        graphEl.innerHTML = students.length === 0
+          ? '<p style="color:var(--text-secondary);font-size:13px;">No students yet.</p>'
+          : students.map((u) => {
+              const pts = u.total_points;
+              const heightPct = pts <= 0 ? 0 : Math.round((pts / maxPts) * 120);
+              return `
+                <div class="bar-graph-col ${pts <= 0 ? 'bar-graph-negative' : ''}">
+                  <div class="bar-graph-value">${pts}</div>
+                  <div class="bar-graph-bar" style="height:${heightPct}px;" title="${escapeHtml(u.name)}: ${pts} pts"></div>
+                  <div class="bar-graph-label">${escapeHtml(u.name)}</div>
+                </div>`;
+            }).join('');
+
+        // Table
+        if (users.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-secondary)">No users found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = users.map((u) => `
+          <tr>
+            <td>${escapeHtml(u.name)}</td>
+            <td style="color:var(--text-secondary);font-size:13px;">${escapeHtml(u.email)}</td>
+            <td><span class="role-tag ${u.role === 'admin' ? 'admin' : ''}">${u.role}</span></td>
+            <td><span class="user-status-badge ${u.status}">${u.status}</span></td>
+            <td class="score-cell" style="color:${u.total_points < 0 ? 'var(--judge-reject)' : 'var(--judge-accept)'}">${u.total_points}</td>
+            <td>
+              ${u.role !== 'admin' ? `
+                <div style="display:flex;gap:6px;">
+                  ${u.status === 'active'
+                    ? `<button class="btn btn-secondary btn-sm block-user-btn" data-id="${u.id}">Block</button>`
+                    : `<button class="btn btn-secondary btn-sm unblock-user-btn" data-id="${u.id}">Unblock</button>`
+                  }
+                  <button class="btn btn-danger btn-sm delete-user-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Delete</button>
+                </div>` : '<span style="color:var(--text-faint);font-size:12px;">—</span>'}
+            </td>
+          </tr>`).join('');
+
+        tbody.querySelectorAll('.block-user-btn').forEach((btn) =>
+          btn.addEventListener('click', () => handleBlockUser(btn.dataset.id))
+        );
+        tbody.querySelectorAll('.unblock-user-btn').forEach((btn) =>
+          btn.addEventListener('click', () => handleUnblockUser(btn.dataset.id))
+        );
+        tbody.querySelectorAll('.delete-user-btn').forEach((btn) =>
+          btn.addEventListener('click', () => handleDeleteUser(btn.dataset.id, btn.dataset.name))
+        );
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="alert alert-error">${escapeHtml(err.message)}</div></td></tr>`;
+      }
+    }
+
+    async function handleBlockUser(id) {
+      const confirmed = await showConfirm('Block user', 'This user will not be able to log in until unblocked.', 'Block');
+      if (!confirmed) return;
+      try { await Api.blockUser(id); loadUsers(); } catch (err) { showAlert(alertBox, err.message); }
+    }
+
+    async function handleUnblockUser(id) {
+      try { await Api.unblockUser(id); loadUsers(); } catch (err) { showAlert(alertBox, err.message); }
+    }
+
+    async function handleDeleteUser(id, name) {
+      const confirmed = await showConfirm(
+        'Delete user',
+        `Permanently delete "${name}"? All their submissions and registrations will be removed. They can re-register with the same email.`
+      );
+      if (!confirmed) return;
+      try { await Api.deleteUser(id); loadUsers(); } catch (err) { showAlert(alertBox, err.message); }
     }
 
     const contestModalOverlay = document.getElementById('contest-modal-overlay');
@@ -342,7 +507,10 @@
 
     async function deleteProblem(questionId) {
       const q = problemsCache.find((p) => String(p.id) === String(questionId));
-      const confirmed = confirm(`Delete "${q ? q.title : 'this problem'}"? This also removes any submissions for it.`);
+      const confirmed = await showConfirm(
+        'Delete problem',
+        `Delete "${q ? q.title : 'this problem'}"? This also removes all submissions for it. This cannot be undone.`
+      );
       if (!confirmed) return;
 
       try {

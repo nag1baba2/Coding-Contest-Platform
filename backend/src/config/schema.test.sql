@@ -1,8 +1,4 @@
--- Test database schema - identical structure to schema.sql, just a
--- different DATABASE name so it never collides with real/dev data.
--- Run this ONCE manually to create the test DB; tests themselves
--- truncate tables between runs (see tests/setup.js) rather than
--- recreating the schema every time, which is much faster.
+-- Test database schema - identical structure to schema.sql, different DATABASE name.
 
 CREATE DATABASE IF NOT EXISTS contest_platform_test;
 USE contest_platform_test;
@@ -13,6 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('admin', 'student') NOT NULL DEFAULT 'student',
+    status ENUM('active', 'blocked') NOT NULL DEFAULT 'active',
+    total_points INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -55,4 +53,15 @@ CREATE TABLE IF NOT EXISTS submissions (
     FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,
     INDEX idx_student_question (student_id, question_id),
     INDEX idx_contest (contest_id)
+);
+
+CREATE TABLE IF NOT EXISTS contest_registrations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    contest_id INT NOT NULL,
+    registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    no_submission_penalty_applied TINYINT(1) NOT NULL DEFAULT 0,
+    UNIQUE KEY uq_registration (user_id, contest_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE
 );

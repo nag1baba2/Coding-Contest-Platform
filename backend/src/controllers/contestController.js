@@ -45,16 +45,26 @@ async function createContest(req, res, next) {
 
 }
 
-// Everyone (auth required): list all contests with computed status.
-// Students use this to see upcoming/active contests.
+// Everyone (auth required): list all contests with computed status and registration count.
 async function listContests(req, res, next) {
     try {
-        const [rows] = await pool.query('SELECT * FROM contests ORDER BY start_time DESC');
+        const [rows] = await pool.query(`
+            SELECT c.*, COUNT(cr.id) AS registration_count
+            FROM contests c
+            LEFT JOIN contest_registrations cr ON cr.contest_id = c.id
+            GROUP BY c.id
+            ORDER BY c.start_time DESC
+        `);
 
-        const withStatus = rows.map((c) => ({
-            ...c,
-            status: getContestStatus(c.start_time, c.end_time),
-        }));
+        const withStatus = rows.map((c) => {
+            const baseStatus = getContestStatus(c.start_time, c.end_time);
+            // Auto-end: if active but zero registrations, treat as ended.
+            const status =
+                baseStatus === 'active' && Number(c.registration_count) === 0
+                    ? 'ended'
+                    : baseStatus;
+            return { ...c, registration_count: Number(c.registration_count), status };
+        });
 
         res.json(withStatus);
     } catch (err) {
@@ -63,18 +73,28 @@ async function listContests(req, res, next) {
 }
 
 // Everyone (auth required): get a single contest's details.
-// Does NOT include questions - those come from a separate endpoint
-// gated by requireActiveContest, so problems can't leak before start time.
 async function getContest(req, res, next) {
     try {
-        const [rows] = await pool.query('SELECT * FROM contests WHERE id = ?', [req.params.id]);
+        const [rows] = await pool.query(`
+            SELECT c.*, COUNT(cr.id) AS registration_count
+            FROM contests c
+            LEFT JOIN contest_registrations cr ON cr.contest_id = c.id
+            WHERE c.id = ?
+            GROUP BY c.id
+        `, [req.params.id]);
 
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Contest not found' });
         }
 
         const contest = rows[0];
-        res.json({ ...contest, status: getContestStatus(contest.start_time, contest.end_time) });
+        const baseStatus = getContestStatus(contest.start_time, contest.end_time);
+        const status =
+            baseStatus === 'active' && Number(contest.registration_count) === 0
+                ? 'ended'
+                : baseStatus;
+
+        res.json({ ...contest, registration_count: Number(contest.registration_count), status });
     } catch (err) {
         next(err);
     }

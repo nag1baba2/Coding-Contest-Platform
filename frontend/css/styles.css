@@ -755,6 +755,138 @@ tr:last-child td {
 }
 
 /* ============================================================
+   Confirm modal (styled replacement for browser confirm())
+   ============================================================ */
+
+.confirm-modal-message {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: var(--space-6);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   Bar graph (admin user points overview)
+   ============================================================ */
+
+.bar-graph {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  height: 160px;
+  padding: var(--space-4) 0 0;
+  overflow-x: auto;
+}
+
+.bar-graph-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 48px;
+}
+
+.bar-graph-bar {
+  width: 32px;
+  background: var(--accent-blue-dim);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  min-height: 2px;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.bar-graph-bar:hover {
+  background: var(--accent-blue);
+}
+
+.bar-graph-value {
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.bar-graph-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 56px;
+  text-align: center;
+}
+
+.bar-graph-negative .bar-graph-bar {
+  background: var(--border-strong);
+  min-height: 2px;
+  height: 2px !important;
+}
+
+/* ============================================================
+   User management table (admin)
+   ============================================================ */
+
+.user-status-badge {
+  font-family: var(--font-display);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.user-status-badge.active {
+  color: var(--judge-accept);
+  border: 1px solid var(--judge-accept);
+}
+
+.user-status-badge.blocked {
+  color: var(--judge-reject);
+  border: 1px solid var(--judge-reject);
+}
+
+/* ============================================================
+   Registration badge on contest cards
+   ============================================================ */
+
+.registered-badge {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--judge-accept);
+  border: 1px solid var(--judge-accept);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Submissions counter banner
+   ============================================================ */
+
+.submissions-counter {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.submissions-counter .counter-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.submissions-counter.low .counter-value {
+  color: var(--judge-reject);
+}
+
+/* ============================================================
    Utility
    ============================================================ */
 

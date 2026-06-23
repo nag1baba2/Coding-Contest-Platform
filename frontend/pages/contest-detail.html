@@ -43,6 +43,10 @@
       </div>
 
       <div id="contest-body" class="hidden">
+        <div id="submissions-counter" class="submissions-counter hidden">
+          <span>Submissions remaining</span>
+          <span class="counter-value" id="counter-value">—</span>
+        </div>
         <div class="section-title">Problems</div>
         <div id="problem-list"></div>
 
@@ -103,22 +107,43 @@
     let leaderboardRefreshInterval = null;
     let mySubmissionsByQuestion = {}; // question_id -> latest submission
 
+    // wrongCountByQuestion[question_id] = number of wrong submissions
+    let wrongCountByQuestion = {};
+
     async function loadMySubmissions() {
       try {
         const subs = await Api.getMySubmissions(contestId);
         mySubmissionsByQuestion = {};
-        // API returns newest-first; keep only the first (latest) seen
-        // per question, matching the "only latest counts" backend rule.
+        wrongCountByQuestion = {};
         for (const s of subs) {
+          // Latest submission per question (API is newest-first)
           if (!(s.question_id in mySubmissionsByQuestion)) {
             mySubmissionsByQuestion[s.question_id] = s;
           }
+          // Count wrong submissions per question
+          if (!s.is_correct) {
+            wrongCountByQuestion[s.question_id] = (wrongCountByQuestion[s.question_id] || 0) + 1;
+          }
         }
       } catch (err) {
-        // Non-fatal - submission history is supplementary, don't block
-        // the page over it.
         mySubmissionsByQuestion = {};
+        wrongCountByQuestion = {};
       }
+    }
+
+    async function loadSubmissionCounter() {
+      try {
+        const { remaining, limit } = await Api.getSubmissionLimit(contestId);
+        updateCounter(remaining, limit);
+      } catch (err) { /* non-fatal */ }
+    }
+
+    function updateCounter(remaining, limit) {
+      const counterEl = document.getElementById('submissions-counter');
+      const valueEl = document.getElementById('counter-value');
+      counterEl.classList.remove('hidden');
+      valueEl.textContent = `${remaining} / ${limit}`;
+      counterEl.classList.toggle('low', remaining <= Math.max(1, Math.floor(limit * 0.2)));
     }
 
     async function loadProblems() {
@@ -135,25 +160,32 @@
         listEl.innerHTML = questions
           .map((q) => {
             const lastSub = mySubmissionsByQuestion[q.id];
+            const wrongCount = wrongCountByQuestion[q.id] || 0;
+            const earnedPts = lastSub && lastSub.is_correct ? Math.max(0, q.points - wrongCount) : 0;
+
             const statusHtml = lastSub
               ? `<span class="status-pill ${lastSub.is_correct ? 'correct' : 'incorrect'}">${lastSub.is_correct ? 'Accepted' : 'Wrong Answer'}</span>`
               : '';
+            const scoreHtml = lastSub
+              ? `<span style="font-family:var(--font-display);font-size:12px;color:${lastSub.is_correct ? 'var(--judge-accept)' : 'var(--judge-reject)'};">${earnedPts} / ${q.points} pts</span>`
+              : '';
+
             return `
             <div class="panel problem-panel" data-question-id="${q.id}">
               <div class="problem-header">
-                <h3>${escapeHtml(q.title)}</h3>
+                <h3 style="user-select:none;">${escapeHtml(q.title)}</h3>
                 <div style="display:flex; gap:8px; align-items:center;">
                   ${statusHtml}
+                  ${scoreHtml}
                   ${difficultyBadge(q.points)}
                   <span class="points-badge">${q.points} pts</span>
                 </div>
               </div>
-              <p style="color: var(--text-secondary); margin-bottom: 12px;">${escapeHtml(q.description)}</p>
-              ${
-                q.input_data
-                  ? `<div class="problem-section"><div class="label">Input</div><div class="code-block">${escapeHtml(q.input_data)}</div></div>`
-                  : ''
-              }
+              <p style="color:var(--text-secondary);margin-bottom:12px;user-select:none;">${escapeHtml(q.description)}</p>
+              ${q.input_data
+                ? `<div class="problem-section"><div class="label">Input</div><div class="code-block" style="user-select:none;">${escapeHtml(q.input_data)}</div></div>`
+                : ''}
+              ${wrongCount > 0 ? `<p style="font-size:12px;color:var(--judge-reject);margin-bottom:8px;">⚠ ${wrongCount} wrong attempt${wrongCount > 1 ? 's' : ''} (−${wrongCount} pts penalty)</p>` : ''}
               <div class="submit-row">
                 <input
                   type="text"
@@ -164,8 +196,7 @@
                 <button class="btn btn-primary submit-btn">Submit</button>
               </div>
               <div class="submit-result" style="margin-top: 8px;"></div>
-            </div>
-          `;
+            </div>`;
           })
           .join('');
 
@@ -189,6 +220,12 @@
               const pillClass = res.is_correct ? 'correct' : 'incorrect';
               const pillLabel = res.is_correct ? 'Accepted' : 'Wrong Answer';
               resultEl.innerHTML = `<span class="status-pill ${pillClass}">${pillLabel}</span> <span style="color: var(--text-secondary); font-size: 13px;">${res.points_awarded} pts awarded</span>`;
+
+              // Refresh counter from response
+              if (res.submissions_remaining !== undefined) {
+                const limit = res.submissions_remaining + (res.submissions_remaining >= 0 ? 1 : 0);
+                loadSubmissionCounter();
+              }
 
               const headerPill = panel.querySelector('.problem-header .status-pill');
               const newPillHtml = `<span class="status-pill ${pillClass}">${pillLabel}</span>`;
@@ -254,6 +291,7 @@
         bodyEl.classList.remove('hidden');
         loadProblems();
         loadLeaderboard();
+        loadSubmissionCounter();
         if (!leaderboardRefreshInterval) {
           leaderboardRefreshInterval = setInterval(loadLeaderboard, 30000);
         }
@@ -265,12 +303,13 @@
         leaderboardRefreshInterval = null;
       }
 
+      document.getElementById('submissions-counter').classList.add('hidden');
       bodyEl.classList.add('hidden');
       lockedEl.classList.remove('hidden');
 
       if (status === 'upcoming') {
         title.textContent = "This contest hasn't started yet";
-        detail.textContent = `Problems unlock at ${formatDateTime(contest.start_time)}.`;
+        detail.textContent = `Problems unlock at ${formatDateTime(contest.start_time)}. Make sure you register before it starts.`;
       } else {
         title.textContent = 'This contest has ended';
         detail.textContent = 'Submissions are closed. You can still view the leaderboard below.';
@@ -282,11 +321,37 @@
 
     async function init() {
       try {
-        const contest = await Api.getContest(contestId);
+        const [contest, regStatus] = await Promise.all([
+          Api.getContest(contestId),
+          Api.getRegistrationStatus(contestId),
+        ]);
+
         document.getElementById('contest-header').innerHTML = `
           <h1>${escapeHtml(contest.name)}</h1>
           ${contest.description ? `<p>${escapeHtml(contest.description)}</p>` : ''}
+          <p style="font-size:13px;color:var(--text-secondary);margin-top:4px;">
+            ${contest.registration_count} registered
+          </p>
         `;
+
+        // If upcoming and not registered, show registration prompt instead of timer
+        if (contest.status === 'upcoming' && !regStatus.registered) {
+          document.getElementById('locked-message').classList.remove('hidden');
+          document.getElementById('locked-title').textContent = "You're not registered for this contest";
+          document.getElementById('locked-detail').textContent =
+            `Register before ${formatDateTime(contest.start_time)} to participate.`;
+          document.getElementById('timer-panel').classList.add('hidden');
+        }
+
+        // If active and not registered, block access
+        if (contest.status === 'active' && !regStatus.registered) {
+          document.getElementById('locked-message').classList.remove('hidden');
+          document.getElementById('locked-title').textContent = 'Registration closed';
+          document.getElementById('locked-detail').textContent =
+            'You did not register before this contest started and cannot participate.';
+          document.getElementById('timer-panel').classList.add('hidden');
+          return;
+        }
 
         const timerPanel = document.getElementById('timer-panel');
         stopTimer = startCountdown(timerPanel, contest.start_time, contest.end_time, (status) => {

@@ -166,4 +166,37 @@ const Api = {
   getStats(contestId) {
     return this.request(`/leaderboard/contest/${contestId}/stats`);
   },
+
+  // Registrations
+  getMyRegistrations() {
+    return this.request('/registrations/mine');
+  },
+  getRegistrationStatus(contestId) {
+    return this.request(`/registrations/contest/${contestId}`);
+  },
+  registerForContest(contestId) {
+    return this.request(`/registrations/contest/${contestId}`, { method: 'POST' });
+  },
+  unregisterFromContest(contestId) {
+    return this.request(`/registrations/contest/${contestId}`, { method: 'DELETE' });
+  },
+
+  // Submission limit
+  getSubmissionLimit(contestId) {
+    return this.request(`/submissions/contest/${contestId}/limit`);
+  },
+
+  // User management (admin)
+  listUsers() {
+    return this.request('/users');
+  },
+  deleteUser(id) {
+    return this.request(`/users/${id}`, { method: 'DELETE' });
+  },
+  blockUser(id) {
+    return this.request(`/users/${id}/block`, { method: 'PATCH' });
+  },
+  unblockUser(id) {
+    return this.request(`/users/${id}/unblock`, { method: 'PATCH' });
+  },
 };

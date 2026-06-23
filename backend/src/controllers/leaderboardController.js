@@ -1,26 +1,42 @@
 const pool = require('../config/db');
+const { getContestStatus } = require('../middleware/contestTime');
 
-// Leaderboard query, explained:
-//
-// 1. Find the LATEST submission per (student, question). "Latest" is
-//    determined first by created_at, with submission id as a tiebreaker
-//    for same-second submissions. TIMESTAMP columns only have
-//    second-level precision by default, so two submissions made close
-//    together (e.g. back-to-back in a fast test, or a student
-//    double-clicking submit) can share the exact same created_at value.
-//    Without the id tiebreaker, the join would match BOTH rows as
-//    "latest" and double-count points - id is monotonically increasing
-//    on every insert, so the highest id for a given (student, question)
-//    pair is always the true most-recent submission, with no precision
-//    ambiguity.
-// 2. Sum points_awarded per student = their contest score.
-// 3. Rank by score DESC, then by earliest "last submission" time ASC
-//    (whoever locked in their final score first wins ties) - this
-//    matches the spec: tie-break by submission time.
+// Applied once per registration when the contest ends. The flag
+// prevents double-applying if the leaderboard is fetched multiple times.
+async function applyNoSubmissionPenalties(contestId) {
+    const [registrations] = await pool.query(
+        `SELECT cr.user_id, cr.id AS reg_id
+         FROM contest_registrations cr
+         WHERE cr.contest_id = ?
+           AND cr.no_submission_penalty_applied = 0
+           AND NOT EXISTS (
+               SELECT 1 FROM submissions s
+               WHERE s.student_id = cr.user_id AND s.contest_id = ?
+           )`,
+        [contestId, contestId]
+    );
+
+    for (const reg of registrations) {
+        await pool.query('UPDATE users SET total_points = total_points - 10 WHERE id = ?', [reg.user_id]);
+        await pool.query(
+            'UPDATE contest_registrations SET no_submission_penalty_applied = 1 WHERE id = ?',
+            [reg.reg_id]
+        );
+    }
+}
+
 async function getLeaderboard(req, res, next) {
     const { contestId } = req.params;
 
     try {
+        const [contestRows] = await pool.query('SELECT * FROM contests WHERE id = ?', [contestId]);
+        if (contestRows.length === 0) return res.status(404).json({ error: 'Contest not found' });
+
+        const status = getContestStatus(contestRows[0].start_time, contestRows[0].end_time);
+        if (status === 'ended') {
+            await applyNoSubmissionPenalties(contestId);
+        }
+
         const [rows] = await pool.query(
             `
             SELECT
@@ -51,10 +67,6 @@ async function getLeaderboard(req, res, next) {
             [contestId, contestId, contestId]
         );
 
-        // mysql2 can return SUM() results as strings rather than numbers
-        // depending on the underlying column type - coerce explicitly so
-        // API consumers (frontend, tests) always get a real number, not
-        // "10" where they expect 10.
         const ranked = rows.map((row, index) => ({
             rank: index + 1,
             ...row,
@@ -66,7 +78,6 @@ async function getLeaderboard(req, res, next) {
     }
 }
 
-// Contest statistics: participants, submission count, most/least solved question.
 async function getContestStats(req, res, next) {
     const { contestId } = req.params;
 
@@ -81,8 +92,6 @@ async function getContestStats(req, res, next) {
             [contestId]
         );
 
-        // "Solved" = at least one correct submission for that question,
-        // counted per distinct student (so resubmitting doesn't inflate it).
         const [solveCounts] = await pool.query(
             `SELECT q.id, q.title, COUNT(DISTINCT s.student_id) AS solve_count
              FROM questions q

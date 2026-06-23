@@ -57,6 +57,14 @@ async function login(req, res, next) {
         }
 
         const user = rows[0];
+
+        if (user.status === 'blocked') {
+            return res.status(403).json({
+                error: 'Your account has been blocked by an administrator.',
+                blocked: true,
+            });
+        }
+
         const passwordMatches = await comparePassword(password, user.password_hash);
 
         if (!passwordMatches) {

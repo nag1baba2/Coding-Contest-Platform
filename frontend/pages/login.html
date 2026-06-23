@@ -57,7 +57,10 @@
         Auth.setSession(res.token, res.user);
         window.location.href = res.user.role === 'admin' ? 'admin.html' : 'contests.html';
       } catch (err) {
-        alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+        const msg = err.data && err.data.blocked
+          ? 'Your account has been blocked by an administrator. Please contact support.'
+          : err.message;
+        alertBox.innerHTML = `<div class="alert alert-error">${msg}</div>`;
         submitBtn.disabled = false;
         submitBtn.textContent = 'Sign in';
       }

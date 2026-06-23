@@ -61,42 +61,73 @@
 
     async function loadContests() {
       try {
-        const contests = await Api.listContests();
+        const [contests, myRegistrations] = await Promise.all([
+          Api.listContests(),
+          Api.getMyRegistrations(),
+        ]);
+        const registeredSet = new Set(myRegistrations);
 
         if (contests.length === 0) {
           listEl.innerHTML = `
             <div class="empty-state">
               <h3>No contests yet</h3>
               <p>Check back soon, or ask an admin to create one.</p>
-            </div>
-          `;
+            </div>`;
           return;
         }
 
-        // Most relevant first: active, then upcoming, then ended -
-        // rather than raw chronological order, so students land on
-        // what they can actually act on right now.
         const order = { active: 0, upcoming: 1, ended: 2 };
         contests.sort((a, b) => order[a.status] - order[b.status]);
 
-        listEl.innerHTML = contests
-          .map(
-            (c) => `
-          <a class="contest-card" href="contest-detail.html?id=${c.id}">
-            <div class="contest-card-top">
-              <div>
-                <h3>${escapeHtml(c.name)}</h3>
-              </div>
-              ${statusPillHtml(c.status)}
-            </div>
-            <div class="meta">
-              <span>Starts ${formatDateTime(c.start_time)}</span>
-              <span>Ends ${formatDateTime(c.end_time)}</span>
-            </div>
-          </a>
-        `
-          )
-          .join('');
+        listEl.innerHTML = contests.map((c) => {
+          const isRegistered = registeredSet.has(c.id);
+          const regBadge = isRegistered ? '<span class="registered-badge">Registered</span>' : '';
+          const regBtn = c.status === 'upcoming'
+            ? `<button class="btn btn-sm ${isRegistered ? 'btn-secondary' : 'btn-primary'} reg-btn"
+                data-id="${c.id}" data-registered="${isRegistered}" style="margin-top:12px;">
+                ${isRegistered ? 'Unregister' : 'Register'}
+               </button>`
+            : '';
+
+          return `
+            <div class="contest-card-wrapper">
+              <a class="contest-card" href="contest-detail.html?id=${c.id}" style="display:block;text-decoration:none;color:inherit;">
+                <div class="contest-card-top">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <h3>${escapeHtml(c.name)}</h3>
+                    ${regBadge}
+                  </div>
+                  ${statusPillHtml(c.status)}
+                </div>
+                <div class="meta">
+                  <span>Starts ${formatDateTime(c.start_time)}</span>
+                  <span>Ends ${formatDateTime(c.end_time)}</span>
+                  <span>${c.registration_count} registered</span>
+                </div>
+              </a>
+              ${regBtn}
+            </div>`;
+        }).join('');
+
+        listEl.querySelectorAll('.reg-btn').forEach((btn) => {
+          btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = btn.dataset.id;
+            const registered = btn.dataset.registered === 'true';
+            btn.disabled = true;
+            try {
+              if (registered) {
+                await Api.unregisterFromContest(id);
+              } else {
+                await Api.registerForContest(id);
+              }
+              loadContests();
+            } catch (err) {
+              showAlert(alertBox, err.message);
+              btn.disabled = false;
+            }
+          });
+        });
       } catch (err) {
         showAlert(alertBox, err.message);
         listEl.innerHTML = '';
