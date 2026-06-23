@@ -1,56 +1,88 @@
 /* ============================================================
-   Coding Contest Platform - Design System
-   ============================================================
-   Aesthetic: judge-system / competitive-programming environment.
-   Dark, focused, monospace-forward - leans into the actual subject
-   (contests, timers, accept/reject states) rather than generic
-   SaaS-dashboard styling.
+   Coding Contest Platform — Design System
+   Light mode default, dark mode via [data-theme="dark"]
+   Accent palette: blue (#2563eb) + green (#16a34a)
    ============================================================ */
 
+/* ── Light mode tokens (default) ─────────────────────────── */
 :root {
-  --bg-void: #0d1117;
-  --bg-panel: #161b22;
-  --bg-panel-raised: #1c2128;
-  --border-subtle: #30363d;
-  --border-strong: #484f58;
+  --bg-void:          #f1f5f9;
+  --bg-panel:         #ffffff;
+  --bg-panel-raised:  #f8fafc;
 
-  --text-primary: #e6edf3;
-  --text-secondary: #8b949e;
-  --text-faint: #57606a;
+  --border-subtle:    #e2e8f0;
+  --border-strong:    #cbd5e1;
 
-  --accent-blue: #58a6ff;
-  --accent-blue-dim: #1f6feb;
-  --judge-accept: #39d353;
-  --judge-accept-bg: rgba(57, 211, 83, 0.12);
-  --judge-reject: #f85149;
-  --judge-reject-bg: rgba(248, 81, 73, 0.12);
-  --judge-pending: #d29922;
-  --judge-pending-bg: rgba(210, 153, 34, 0.12);
+  --text-primary:     #0f172a;
+  --text-secondary:   #64748b;
+  --text-faint:       #94a3b8;
+
+  --accent-blue:      #2563eb;
+  --accent-blue-dim:  #3b82f6;
+  --accent-green:     #16a34a;
+
+  --judge-accept:     #16a34a;
+  --judge-accept-bg:  #dcfce7;
+  --judge-reject:     #dc2626;
+  --judge-reject-bg:  #fee2e2;
+  --judge-pending:    #d97706;
+  --judge-pending-bg: #fef3c7;
+
+  --topbar-bg:        #ffffff;
+  --topbar-shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 0 rgba(0,0,0,0.04);
+  --shadow-sm:        0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:        0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
 
   --font-display: 'JetBrains Mono', 'Courier New', monospace;
-  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-body:    'Inter', -apple-system, sans-serif;
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
   --space-12: 48px;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ── Dark mode tokens ─────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-void:          #0d1117;
+  --bg-panel:         #161b22;
+  --bg-panel-raised:  #1c2128;
+
+  --border-subtle:    #30363d;
+  --border-strong:    #484f58;
+
+  --text-primary:     #e6edf3;
+  --text-secondary:   #8b949e;
+  --text-faint:       #57606a;
+
+  --accent-blue:      #58a6ff;
+  --accent-blue-dim:  #1f6feb;
+  --accent-green:     #39d353;
+
+  --judge-accept:     #39d353;
+  --judge-accept-bg:  rgba(57,211,83,0.12);
+  --judge-reject:     #f85149;
+  --judge-reject-bg:  rgba(248,81,73,0.12);
+  --judge-pending:    #d29922;
+  --judge-pending-bg: rgba(210,153,34,0.12);
+
+  --topbar-bg:     #161b22;
+  --topbar-shadow: none;
+  --shadow-sm:     none;
+  --shadow-md:     none;
 }
 
-html {
-  -webkit-font-smoothing: antialiased;
-}
+/* ── Reset ────────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { -webkit-font-smoothing: antialiased; }
 
 body {
   background: var(--bg-void);
@@ -59,6 +91,7 @@ body {
   font-size: 15px;
   line-height: 1.5;
   min-height: 100vh;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 a:focus-visible,
@@ -78,7 +111,7 @@ select:focus-visible {
 }
 
 /* ============================================================
-   Layout primitives
+   Layout
    ============================================================ */
 
 .app-shell {
@@ -87,58 +120,92 @@ select:focus-visible {
   flex-direction: column;
 }
 
+/* ── Topbar ───────────────────────────────────────────────── */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-8);
+  padding: 0 var(--space-8);
+  height: 56px;
+  background: var(--topbar-bg);
   border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-panel);
-  flex-wrap: wrap;
+  box-shadow: var(--topbar-shadow);
+  position: sticky;
+  top: 0;
+  z-index: 50;
   gap: var(--space-3);
 }
 
 .brand {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
   text-decoration: none;
   letter-spacing: -0.02em;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .brand-mark {
-  color: var(--judge-accept);
+  color: var(--accent-green);
+  font-size: 18px;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: var(--space-6);
-  flex-wrap: wrap;
+  gap: 2px;
 }
 
 .nav-links a {
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 14px;
-  transition: color 0.15s ease;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
 }
 
-.nav-links a:hover,
-.nav-links a.active {
+.nav-links a:hover {
   color: var(--text-primary);
+  background: var(--bg-panel-raised);
+}
+
+.nav-links a.active {
+  color: var(--accent-blue);
+  font-weight: 600;
 }
 
 .user-badge {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
+/* ── Theme toggle button ──────────────────────────────────── */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-panel-raised);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+/* ── Role tag ─────────────────────────────────────────────── */
 .role-tag {
   font-family: var(--font-display);
   font-size: 11px;
@@ -151,10 +218,11 @@ select:focus-visible {
 }
 
 .role-tag.admin {
-  border-color: var(--judge-pending);
-  color: var(--judge-pending);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
 }
 
+/* ── Main content area ────────────────────────────────────── */
 main {
   flex: 1;
   width: 100%;
@@ -169,7 +237,7 @@ main {
 
 .page-header h1 {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: var(--space-2);
@@ -188,7 +256,7 @@ main {
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
-  padding: 10px 18px;
+  padding: 9px 18px;
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
@@ -199,12 +267,13 @@ main {
 }
 
 .btn-primary {
-  background: var(--accent-blue-dim);
-  color: white;
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
 }
 
 .btn-primary:hover {
-  background: var(--accent-blue);
+  filter: brightness(1.12);
 }
 
 .btn-secondary {
@@ -239,7 +308,7 @@ main {
 }
 
 .btn-sm {
-  padding: 6px 12px;
+  padding: 5px 12px;
   font-size: 13px;
 }
 
@@ -262,26 +331,32 @@ main {
 .field input,
 .field textarea {
   width: 100%;
-  background: var(--bg-void);
+  background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 14px;
-  transition: border-color 0.15s ease;
-  /* Chrome renders the datetime-local picker icon (and other native
-     controls) in a dark color by default, assuming a light background.
-     On our dark bg-void background that icon is effectively invisible
-     and unclickable-looking, even though it's technically still there.
-     color-scheme: dark tells the browser to use its light-on-dark
-     variant of native form controls instead. */
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  color-scheme: light;
+}
+
+[data-theme="dark"] .field input,
+[data-theme="dark"] .field textarea {
   color-scheme: dark;
 }
 
 .field input:focus,
 .field textarea:focus {
   border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  outline: none;
+}
+
+[data-theme="dark"] .field input:focus,
+[data-theme="dark"] .field textarea:focus {
+  box-shadow: 0 0 0 3px rgba(88,166,255,0.15);
 }
 
 .field textarea {
@@ -303,8 +378,27 @@ main {
   margin-top: var(--space-1);
 }
 
+/* ── Inputs outside .field (submit row, etc.) ─────────────── */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="datetime-local"],
+textarea {
+  color-scheme: light;
+}
+
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="datetime-local"],
+[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
 /* ============================================================
-   Cards / panels
+   Cards / Panels
    ============================================================ */
 
 .panel {
@@ -312,15 +406,20 @@ main {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
 }
 
+/* ── Auth layout ──────────────────────────────────────────── */
 .auth-shell {
-  max-width: 380px;
-  margin: 80px auto;
+  max-width: 400px;
+  margin: 72px auto;
+  padding: 0 var(--space-4);
 }
 
 .auth-shell .panel {
   padding: var(--space-8);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .auth-shell h1 {
@@ -345,26 +444,25 @@ main {
 .auth-switch a {
   color: var(--accent-blue);
   text-decoration: none;
+  font-weight: 500;
 }
 
 /* ============================================================
-   Status pills - signature visual language. Mirrors real
-   judge-system conventions (Accepted/Wrong Answer) so the
-   active/upcoming/ended and correct/incorrect states read
-   instantly, the way they would on Codeforces/LeetCode.
+   Status pills
    ============================================================ */
 
 .status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 100px;
+  white-space: nowrap;
 }
 
 .status-pill::before {
@@ -373,32 +471,14 @@ main {
   height: 6px;
   border-radius: 50%;
   background: currentColor;
+  flex-shrink: 0;
 }
 
-.status-pill.active {
-  background: var(--judge-accept-bg);
-  color: var(--judge-accept);
-}
-
-.status-pill.upcoming {
-  background: var(--judge-pending-bg);
-  color: var(--judge-pending);
-}
-
-.status-pill.ended {
-  background: rgba(139, 148, 158, 0.12);
-  color: var(--text-secondary);
-}
-
-.status-pill.correct {
-  background: var(--judge-accept-bg);
-  color: var(--judge-accept);
-}
-
-.status-pill.incorrect {
-  background: var(--judge-reject-bg);
-  color: var(--judge-reject);
-}
+.status-pill.active  { background: var(--judge-accept-bg);  color: var(--judge-accept); }
+.status-pill.upcoming{ background: var(--judge-pending-bg); color: var(--judge-pending);}
+.status-pill.ended   { background: rgba(100,116,139,0.12);  color: var(--text-secondary);}
+.status-pill.correct { background: var(--judge-accept-bg);  color: var(--judge-accept); }
+.status-pill.incorrect{background: var(--judge-reject-bg);  color: var(--judge-reject); }
 
 /* ============================================================
    Contest list / cards
@@ -410,6 +490,11 @@ main {
   gap: var(--space-3);
 }
 
+.contest-card-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
 .contest-card {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
@@ -418,12 +503,13 @@ main {
   text-decoration: none;
   color: var(--text-primary);
   display: block;
-  transition: border-color 0.15s ease, transform 0.1s ease;
-  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+  box-shadow: var(--shadow-sm);
 }
 
 .contest-card:hover {
-  border-color: var(--border-strong);
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
@@ -437,9 +523,8 @@ main {
 
 .contest-card h3 {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: var(--space-1);
 }
 
 .contest-card .meta {
@@ -463,9 +548,7 @@ main {
 }
 
 /* ============================================================
-   Countdown timer - signature element. Live, ticking, and
-   visually shifts state as a contest's actual lifecycle
-   progresses - the core mechanic of the product.
+   Countdown timer
    ============================================================ */
 
 .timer-block {
@@ -475,7 +558,7 @@ main {
 }
 
 .timer-label {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-secondary);
@@ -489,17 +572,13 @@ main {
   color: var(--text-primary);
 }
 
-.timer-display.urgent {
-  color: var(--judge-reject);
-}
+.timer-display.urgent { color: var(--judge-reject); }
 
 /* ============================================================
-   Question / problem view
+   Problem / question view
    ============================================================ */
 
-.problem-panel {
-  margin-bottom: var(--space-4);
-}
+.problem-panel { margin-bottom: var(--space-4); }
 
 .problem-header {
   display: flex;
@@ -511,7 +590,7 @@ main {
 
 .problem-header h3 {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .points-badge {
@@ -528,51 +607,36 @@ main {
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: var(--radius-sm);
   white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.difficulty-badge.easy {
-  color: var(--judge-accept);
-  border: 1px solid var(--judge-accept);
-  background: var(--judge-accept-bg);
-}
+.difficulty-badge.easy   { color: var(--judge-accept);  border: 1px solid var(--judge-accept);  background: var(--judge-accept-bg); }
+.difficulty-badge.medium { color: var(--judge-pending); border: 1px solid var(--judge-pending); background: var(--judge-pending-bg);}
+.difficulty-badge.hard   { color: var(--judge-reject);  border: 1px solid var(--judge-reject);  background: var(--judge-reject-bg); }
 
-.difficulty-badge.medium {
-  color: var(--judge-pending);
-  border: 1px solid var(--judge-pending);
-  background: var(--judge-pending-bg);
-}
-
-.difficulty-badge.hard {
-  color: var(--judge-reject);
-  border: 1px solid var(--judge-reject);
-  background: var(--judge-reject-bg);
-}
-
-.problem-section {
-  margin-bottom: var(--space-4);
-}
+.problem-section { margin-bottom: var(--space-4); }
 
 .problem-section .label {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-faint);
   margin-bottom: var(--space-1);
+  font-weight: 600;
 }
 
 .code-block {
-  background: var(--bg-void);
+  background: var(--bg-panel-raised);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: var(--space-3);
   font-family: var(--font-display);
   font-size: 13px;
-  color: var(--judge-accept);
+  color: var(--accent-green);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -585,20 +649,28 @@ main {
 
 .submit-row input {
   flex: 1;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  transition: border-color 0.15s;
+}
+
+.submit-row input:focus {
+  border-color: var(--accent-blue);
+  outline: none;
 }
 
 /* ============================================================
-   Tables (leaderboard, submissions, stats)
+   Tables
    ============================================================ */
 
-.table-wrap {
-  overflow-x: auto;
-}
+.table-wrap { overflow-x: auto; }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+table { width: 100%; border-collapse: collapse; }
 
 th {
   text-align: left;
@@ -610,6 +682,7 @@ th {
   padding: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
+  font-weight: 600;
 }
 
 td {
@@ -618,9 +691,9 @@ td {
   font-size: 14px;
 }
 
-tr:last-child td {
-  border-bottom: none;
-}
+tr:last-child td { border-bottom: none; }
+
+tr:hover td { background: var(--bg-panel-raised); }
 
 .rank-cell {
   font-family: var(--font-display);
@@ -628,19 +701,22 @@ tr:last-child td {
   color: var(--text-secondary);
 }
 
-.rank-cell.gold { color: #e3b341; }
-.rank-cell.silver { color: #c9d1d9; }
-.rank-cell.bronze { color: #cc8c5c; }
+.rank-cell.gold   { color: #ca8a04; }
+.rank-cell.silver { color: #64748b; }
+.rank-cell.bronze { color: #b45309; }
 
 .score-cell {
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--judge-accept);
+  color: var(--accent-green);
 }
 
 .leaderboard-own-row td {
-  background: rgba(88, 166, 255, 0.06);
-  border-bottom-color: var(--border-subtle);
+  background: rgba(37,99,235,0.05);
+}
+
+[data-theme="dark"] .leaderboard-own-row td {
+  background: rgba(88,166,255,0.06);
 }
 
 .leaderboard-own-row td:first-child {
@@ -648,7 +724,7 @@ tr:last-child td {
 }
 
 /* ============================================================
-   Stat cards (admin contest stats page)
+   Stat cards
    ============================================================ */
 
 .stat-grid {
@@ -663,13 +739,14 @@ tr:last-child td {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-card .stat-value {
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: 700;
-  color: var(--judge-accept);
+  color: var(--accent-green);
 }
 
 .stat-card .stat-label {
@@ -681,7 +758,7 @@ tr:last-child td {
 }
 
 /* ============================================================
-   Alerts / empty states / errors
+   Alerts / empty states
    ============================================================ */
 
 .alert {
@@ -716,13 +793,13 @@ tr:last-child td {
 }
 
 /* ============================================================
-   Modal (used for admin add-question form)
+   Modals
    ============================================================ */
 
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0,0,0,0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -733,12 +810,13 @@ tr:last-child td {
 .modal {
   background: var(--bg-panel);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--space-6);
   max-width: 480px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-md);
 }
 
 .modal h2 {
@@ -754,10 +832,6 @@ tr:last-child td {
   margin-top: var(--space-6);
 }
 
-/* ============================================================
-   Confirm modal (styled replacement for browser confirm())
-   ============================================================ */
-
 .confirm-modal-message {
   color: var(--text-secondary);
   font-size: 14px;
@@ -766,7 +840,7 @@ tr:last-child td {
 }
 
 /* ============================================================
-   Bar graph (admin user points overview)
+   Bar graph (admin user overview)
    ============================================================ */
 
 .bar-graph {
@@ -788,16 +862,14 @@ tr:last-child td {
 
 .bar-graph-bar {
   width: 32px;
-  background: var(--accent-blue-dim);
+  background: var(--accent-blue);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   min-height: 2px;
   transition: background 0.15s;
-  position: relative;
+  opacity: 0.75;
 }
 
-.bar-graph-bar:hover {
-  background: var(--accent-blue);
-}
+.bar-graph-bar:hover { opacity: 1; }
 
 .bar-graph-value {
   font-family: var(--font-display);
@@ -822,7 +894,7 @@ tr:last-child td {
 }
 
 /* ============================================================
-   User management table (admin)
+   User management table
    ============================================================ */
 
 .user-status-badge {
@@ -834,37 +906,32 @@ tr:last-child td {
   letter-spacing: 0.04em;
 }
 
-.user-status-badge.active {
-  color: var(--judge-accept);
-  border: 1px solid var(--judge-accept);
-}
-
-.user-status-badge.blocked {
-  color: var(--judge-reject);
-  border: 1px solid var(--judge-reject);
-}
+.user-status-badge.active  { color: var(--judge-accept); border: 1px solid var(--judge-accept); background: var(--judge-accept-bg); }
+.user-status-badge.blocked { color: var(--judge-reject); border: 1px solid var(--judge-reject); background: var(--judge-reject-bg); }
 
 /* ============================================================
-   Registration badge on contest cards
+   Registration badge
    ============================================================ */
 
 .registered-badge {
   font-family: var(--font-display);
   font-size: 11px;
-  color: var(--judge-accept);
-  border: 1px solid var(--judge-accept);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+  background: var(--judge-accept-bg);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 
 /* ============================================================
-   Submissions counter banner
+   Submissions counter
    ============================================================ */
 
 .submissions-counter {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-blue);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
@@ -873,6 +940,7 @@ tr:last-child td {
   justify-content: space-between;
   font-size: 13px;
   color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
 }
 
 .submissions-counter .counter-value {
@@ -882,9 +950,8 @@ tr:last-child td {
   color: var(--text-primary);
 }
 
-.submissions-counter.low .counter-value {
-  color: var(--judge-reject);
-}
+.submissions-counter.low { border-left-color: var(--judge-reject); }
+.submissions-counter.low .counter-value { color: var(--judge-reject); }
 
 /* ============================================================
    Utility
@@ -900,37 +967,41 @@ tr:last-child td {
 
 .section-title {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
+  letter-spacing: 0.07em;
+  color: var(--text-faint);
   margin-bottom: var(--space-4);
+  font-weight: 600;
 }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.mt-6 { margin-top: var(--space-6); }
+.mb-6 { margin-bottom: var(--space-6); }
 
-.text-center {
-  text-align: center;
-}
+/* ============================================================
+   Responsive
+   ============================================================ */
 
-.mt-6 {
-  margin-top: var(--space-6);
-}
+@media (max-width: 640px) {
+  .topbar {
+    padding: 0 var(--space-4);
+    height: auto;
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+    flex-wrap: wrap;
+  }
 
-.mb-6 {
-  margin-bottom: var(--space-6);
-}
-
-@media (max-width: 600px) {
   main {
     padding: var(--space-4);
   }
+
   .field-row {
     grid-template-columns: 1fr;
   }
-  .topbar {
-    padding: var(--space-3) var(--space-4);
+
+  .timer-display {
+    font-size: 28px;
   }
 }

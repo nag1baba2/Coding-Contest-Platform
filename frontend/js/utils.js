@@ -112,3 +112,21 @@ function showAlert(container, message, type = 'error') {
 function clearAlert(container) {
   container.innerHTML = '';
 }
+
+// ── Theme toggle ──────────────────────────────────────────────
+function setupThemeToggle() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  const update = (theme) => {
+    btn.textContent = theme === 'dark' ? '☀' : '☾';
+    btn.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  };
+  update(document.documentElement.getAttribute('data-theme') || 'light');
+  btn.addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    update(next);
+  });
+}
+setupThemeToggle();
