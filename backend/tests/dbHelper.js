@@ -10,13 +10,23 @@ const pool = require('../src/config/db');
 async function cleanDatabase() {
     await pool.query('SET FOREIGN_KEY_CHECKS = 0');
     await pool.query('TRUNCATE TABLE submissions');
+    await pool.query('TRUNCATE TABLE contest_registrations');
     await pool.query('TRUNCATE TABLE questions');
     await pool.query('TRUNCATE TABLE contests');
     await pool.query('TRUNCATE TABLE users');
     await pool.query('SET FOREIGN_KEY_CHECKS = 1');
 }
 
+// Bypasses the registration-window check (used in tests where the contest
+// is already active so the API endpoint would reject the registration).
+async function registerForContest(userId, contestId) {
+    await pool.query(
+        'INSERT IGNORE INTO contest_registrations (user_id, contest_id) VALUES (?, ?)',
+        [userId, contestId]
+    );
+}
+
 // NOTE: closing the DB pool is handled once, globally, by
 // tests/globalTeardown.js - not here. See that file for why.
 
-module.exports = { cleanDatabase };
+module.exports = { cleanDatabase, registerForContest };

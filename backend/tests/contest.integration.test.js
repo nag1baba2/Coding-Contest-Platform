@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { cleanDatabase } = require('./dbHelper');
+const { cleanDatabase, registerForContest } = require('./dbHelper');
 const pool = require('../src/config/db');
 
 // Helper: registers a user and returns their auth header + id.
@@ -164,9 +164,10 @@ describe('Time-gated question access', () => {
         const student = await createUser({ name: 'Student', email: 'student@test.com' });
 
         const contestId = await createContest(admin.headers, {
-            startOffsetMs: -60 * 60 * 1000, // started 1 hour ago
-            endOffsetMs: 60 * 60 * 1000, // ends in 1 hour
+            startOffsetMs: -60 * 60 * 1000,
+            endOffsetMs: 60 * 60 * 1000,
         });
+        await registerForContest(student.userId, contestId);
 
         const res = await request(app)
             .get(`/api/questions/contest/${contestId}`)
@@ -183,6 +184,7 @@ describe('Time-gated question access', () => {
             startOffsetMs: -60 * 60 * 1000,
             endOffsetMs: 60 * 60 * 1000,
         });
+        await registerForContest(student.userId, contestId);
 
         await request(app)
             .post('/api/questions')
@@ -233,6 +235,7 @@ describe('Submission scoring + leaderboard', () => {
     test('correct submission is scored correctly', async () => {
         const { contestId, questionId } = await setupActiveContestWithQuestion();
         const student = await createUser({ name: 'Student', email: 'student@test.com' });
+        await registerForContest(student.userId, contestId);
 
         const res = await request(app)
             .post(`/api/submissions/contest/${contestId}`)
@@ -247,6 +250,7 @@ describe('Submission scoring + leaderboard', () => {
     test('answer is trimmed but still case-sensitive (matches scoring.test.js rule)', async () => {
         const { contestId, questionId } = await setupActiveContestWithQuestion();
         const student = await createUser({ name: 'Student', email: 'student@test.com' });
+        await registerForContest(student.userId, contestId);
 
         const trimmed = await request(app)
             .post(`/api/submissions/contest/${contestId}`)
@@ -278,10 +282,9 @@ describe('Submission scoring + leaderboard', () => {
     });
 
     test('only the LATEST submission counts toward leaderboard score', async () => {
-        // This is the exact scenario verified manually: submit correct,
-        // then submit incorrect - final score should be 0, not 10.
         const { contestId, questionId } = await setupActiveContestWithQuestion();
         const student = await createUser({ name: 'Student', email: 'student@test.com' });
+        await registerForContest(student.userId, contestId);
 
         await request(app)
             .post(`/api/submissions/contest/${contestId}`)
@@ -305,6 +308,8 @@ describe('Submission scoring + leaderboard', () => {
         const { contestId, questionId } = await setupActiveContestWithQuestion();
         const studentHigh = await createUser({ name: 'High Scorer', email: 'high@test.com' });
         const studentLow = await createUser({ name: 'Low Scorer', email: 'low@test.com' });
+        await registerForContest(studentHigh.userId, contestId);
+        await registerForContest(studentLow.userId, contestId);
 
         await request(app)
             .post(`/api/submissions/contest/${contestId}`)

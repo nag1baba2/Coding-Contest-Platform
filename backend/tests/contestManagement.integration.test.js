@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { cleanDatabase } = require('./dbHelper');
+const { cleanDatabase, registerForContest } = require('./dbHelper');
 const pool = require('../src/config/db');
 
 // Pool is closed once globally via jest.config.js globalTeardown -
@@ -221,6 +221,8 @@ describe('Contest statistics', () => {
         const { admin, contestId, q1Id } = await setupContestWithTwoQuestions();
         const studentA = await createUser({ name: 'A', email: 'a@test.com' });
         const studentB = await createUser({ name: 'B', email: 'b@test.com' });
+        await registerForContest(studentA.userId, contestId);
+        await registerForContest(studentB.userId, contestId);
 
         await request(app)
             .post(`/api/submissions/contest/${contestId}`)
@@ -245,6 +247,8 @@ describe('Contest statistics', () => {
         const { admin, contestId, q1Id, q2Id } = await setupContestWithTwoQuestions();
         const studentA = await createUser({ name: 'A', email: 'a@test.com' });
         const studentB = await createUser({ name: 'B', email: 'b@test.com' });
+        await registerForContest(studentA.userId, contestId);
+        await registerForContest(studentB.userId, contestId);
 
         // Both solve q1 (easy), only one solves q2 (hard)
         await request(app)
@@ -271,6 +275,7 @@ describe('Contest statistics', () => {
     test('resubmitting (even multiple times) does not inflate solve_count beyond 1 per student', async () => {
         const { admin, contestId, q1Id } = await setupContestWithTwoQuestions();
         const student = await createUser({ name: 'A', email: 'a@test.com' });
+        await registerForContest(student.userId, contestId);
 
         // Submit correct, then correct again - should still only count once
         await request(app)
