@@ -1,5 +1,5 @@
 const { BASE, uniqueEmail, register, login, logout, clearSession, setDateTimeInputValue } = require('../helpers');
-const { promoteToAdmin, registerForContest } = require('../dbHelper');
+const { promoteToAdmin, registerForContest, cleanupTestData } = require('../dbHelper');
 
 // This spec mirrors, step by step, the exact manual walkthrough used
 // to verify the app by hand: admin creates a contest, adds a problem,
@@ -159,6 +159,10 @@ describe('Full contest lifecycle', () => {
         const rowText = await leaderboardRow.getText();
         expect(rowText).toContain('Lifecycle Student');
         expect(rowText).toContain('10'); // points awarded
+    });
+
+    after(async () => {
+        await cleanupTestData(['lifecycle_admin_%@e2e.test', 'lifecycle_student_%@e2e.test']);
     });
 
     it('shows the submission in the admin stats page', async () => {

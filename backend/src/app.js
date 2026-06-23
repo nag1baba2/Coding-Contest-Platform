@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
 const contestRoutes = require('./routes/contestRoutes');
@@ -17,6 +18,12 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Serve the frontend static files from the /frontend folder
+app.use(express.static(path.join(__dirname, '../../frontend')));
+
+// Root redirect → login page
+app.get('/', (req, res) => res.redirect('/pages/login.html'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 

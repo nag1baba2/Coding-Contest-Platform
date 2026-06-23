@@ -3,7 +3,7 @@
 // Every page includes this file before its own page-specific script.
 // ============================================================
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 
 const Auth = {
   getToken() {

@@ -48,4 +48,18 @@ async function registerForContest(userEmail, contestName) {
     }
 }
 
-module.exports = { promoteToAdmin, registerForContest };
+// Deletes all users whose email matches any of the given LIKE patterns.
+// ON DELETE CASCADE on all FK relationships means deleting a user also
+// removes their contests → questions → submissions → registrations automatically.
+async function cleanupTestData(emailPatterns) {
+    const connection = await getConnection();
+    try {
+        for (const pattern of emailPatterns) {
+            await connection.execute('DELETE FROM users WHERE email LIKE ?', [pattern]);
+        }
+    } finally {
+        await connection.end();
+    }
+}
+
+module.exports = { promoteToAdmin, registerForContest, cleanupTestData };

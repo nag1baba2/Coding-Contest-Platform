@@ -1,5 +1,5 @@
 const { BASE, uniqueEmail, register, login, logout, clearSession, setDateTimeInputValue } = require('../helpers');
-const { promoteToAdmin, registerForContest } = require('../dbHelper');
+const { promoteToAdmin, registerForContest, cleanupTestData } = require('../dbHelper');
 
 // ── helpers ───────────────────────────────────────────────────────────────
 
@@ -36,6 +36,10 @@ describe('Python code submission + Final Submit', () => {
         await register('Py Admin', adminEmail, 'password123');
         await logout();
         await promoteToAdmin(adminEmail);
+    });
+
+    after(async () => {
+        await cleanupTestData(['py_admin_%@e2e.test', 'py_student_%@e2e.test']);
     });
 
     // ── Admin: create contest + Python question ──────────────────────────

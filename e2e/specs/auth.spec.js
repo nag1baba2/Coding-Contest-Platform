@@ -1,10 +1,21 @@
 // WebDriverIO provides `expect`, `$`, and `browser` as globals when run
 // via the wdio test runner - no explicit import needed for those.
 const { BASE, uniqueEmail, register, login, logout, clearSession } = require('../helpers');
+const { cleanupTestData } = require('../dbHelper');
 
 describe('Authentication', () => {
     beforeEach(async () => {
         await clearSession();
+    });
+
+    after(async () => {
+        await cleanupTestData([
+            'student_%@e2e.test',
+            'dup_%@e2e.test',
+            'login_%@e2e.test',
+            'wrongpw_%@e2e.test',
+            'logout_%@e2e.test',
+        ]);
     });
 
     it('registers a new student and lands on the contests page', async () => {
