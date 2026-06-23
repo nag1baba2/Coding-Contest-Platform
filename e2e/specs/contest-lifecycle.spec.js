@@ -1,5 +1,5 @@
 const { BASE, uniqueEmail, register, login, logout, clearSession, setDateTimeInputValue } = require('../helpers');
-const { promoteToAdmin } = require('../dbHelper');
+const { promoteToAdmin, registerForContest } = require('../dbHelper');
 
 // This spec mirrors, step by step, the exact manual walkthrough used
 // to verify the app by hand: admin creates a contest, adds a problem,
@@ -98,6 +98,9 @@ describe('Full contest lifecycle', () => {
 
     it('lets a student register, find the active contest, and see it as Live', async () => {
         await register('Lifecycle Student', studentEmail, 'password123');
+        // Contest is already active so the registration API rejects late sign-ups.
+        // Insert directly into the DB to simulate pre-contest registration.
+        await registerForContest(studentEmail, contestName);
 
         const card = await $(`.contest-card*=${contestName}`);
         await card.waitForDisplayed({ timeout: 5000 });

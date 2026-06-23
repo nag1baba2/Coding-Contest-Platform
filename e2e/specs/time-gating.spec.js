@@ -1,5 +1,5 @@
 const { uniqueEmail, register, login, logout, clearSession, setDateTimeInputValue } = require('../helpers');
-const { promoteToAdmin } = require('../dbHelper');
+const { promoteToAdmin, registerForContest } = require('../dbHelper');
 
 // This spec is deliberately slow (it waits through a real wall-clock
 // window for a contest to transition from upcoming -> active) because
@@ -49,6 +49,10 @@ describe('Time-gating: contest transitions from upcoming to active', () => {
 
         await logout();
         await register('Timegate Student', studentEmail, 'password123');
+        // Register the student for the contest via DB — the contest starts
+        // in ~1 min so the API endpoint would accept it too, but using the
+        // DB helper keeps the before() hook fast and timing-independent.
+        await registerForContest(studentEmail, contestName);
     });
 
     it('shows the contest as Upcoming before its start time', async () => {

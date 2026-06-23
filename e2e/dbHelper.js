@@ -11,15 +11,18 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config({ path: '../backend/.env' });
 
-async function promoteToAdmin(email) {
-    const connection = await mysql.createConnection({
+async function getConnection() {
+    return mysql.createConnection({
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME || 'contest_platform',
         timezone: 'Z',
     });
+}
 
+async function promoteToAdmin(email) {
+    const connection = await getConnection();
     try {
         await connection.execute('UPDATE users SET role = ? WHERE email = ?', ['admin', email]);
     } finally {
@@ -27,4 +30,22 @@ async function promoteToAdmin(email) {
     }
 }
 
-module.exports = { promoteToAdmin };
+// Bypasses the registration-window check for tests that create already-active
+// contests (where the API endpoint rejects registration as too late).
+async function registerForContest(userEmail, contestName) {
+    const connection = await getConnection();
+    try {
+        const [[user]] = await connection.execute('SELECT id FROM users WHERE email = ?', [userEmail]);
+        const [[contest]] = await connection.execute('SELECT id FROM contests WHERE name = ?', [contestName]);
+        if (user && contest) {
+            await connection.execute(
+                'INSERT IGNORE INTO contest_registrations (user_id, contest_id) VALUES (?, ?)',
+                [user.id, contest.id]
+            );
+        }
+    } finally {
+        await connection.end();
+    }
+}
+
+module.exports = { promoteToAdmin, registerForContest };
