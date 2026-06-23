@@ -21,6 +21,14 @@ async function createUser({ name, email, password = 'password123', role = 'stude
 
 // Helper: creates a contest with a given time offset (in ms from now),
 // so tests can easily build "active now", "starts in future", "ended already".
+// Format in LOCAL time (no timezone suffix) so MySQL stores and returns
+// the same literal string — avoids the UTC-vs-local shift on IST machines.
+function toLocalDatetime(ms) {
+    const d = new Date(ms);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 async function createContest(adminHeaders, { startOffsetMs, endOffsetMs, name = 'Test Contest' }) {
     const now = Date.now();
     const res = await request(app)
@@ -28,8 +36,8 @@ async function createContest(adminHeaders, { startOffsetMs, endOffsetMs, name = 
         .set(adminHeaders)
         .send({
             name,
-            start_time: new Date(now + startOffsetMs).toISOString().slice(0, 19),
-            end_time: new Date(now + endOffsetMs).toISOString().slice(0, 19),
+            start_time: toLocalDatetime(now + startOffsetMs),
+            end_time: toLocalDatetime(now + endOffsetMs),
         });
     return res.body.id;
 }

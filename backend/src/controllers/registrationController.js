@@ -44,8 +44,7 @@ async function unregisterFromContest(req, res, next) {
     }
 }
 
-// Returns all contest IDs the current user is registered for (used by
-// contests list page to show registration status on each card in one call).
+// Returns all contest IDs the current user is registered for.
 async function getMyRegistrations(req, res, next) {
     try {
         const [rows] = await pool.query(
@@ -62,13 +61,64 @@ async function getRegistrationStatus(req, res, next) {
     const { contestId } = req.params;
     try {
         const [rows] = await pool.query(
-            'SELECT id FROM contest_registrations WHERE user_id = ? AND contest_id = ?',
+            'SELECT id, final_submitted, final_submitted_at FROM contest_registrations WHERE user_id = ? AND contest_id = ?',
             [req.user.id, contestId]
         );
-        res.json({ registered: rows.length > 0 });
+        res.json({
+            registered: rows.length > 0,
+            final_submitted: rows.length > 0 ? !!rows[0].final_submitted : false,
+            final_submitted_at: rows.length > 0 ? rows[0].final_submitted_at : null,
+        });
     } catch (err) {
         next(err);
     }
 }
 
-module.exports = { registerForContest, unregisterFromContest, getMyRegistrations, getRegistrationStatus };
+// Mark contest as final-submitted for this student.
+// Applies -10 penalty if they made zero submissions during the contest.
+async function finalSubmit(req, res, next) {
+    const { contestId } = req.params;
+    const userId = req.user.id;
+
+    try {
+        const [[reg]] = await pool.query(
+            'SELECT * FROM contest_registrations WHERE user_id = ? AND contest_id = ?',
+            [userId, contestId]
+        );
+        if (!reg) return res.status(403).json({ error: 'You are not registered for this contest' });
+        if (reg.final_submitted) return res.status(400).json({ error: 'You have already final submitted this contest' });
+
+        const [[{ subCount }]] = await pool.query(
+            'SELECT COUNT(*) AS subCount FROM submissions WHERE student_id = ? AND contest_id = ?',
+            [userId, contestId]
+        );
+        const hasSubmissions = Number(subCount) > 0;
+
+        let penaltyApplied = false;
+        if (!hasSubmissions && !reg.no_submission_penalty_applied) {
+            await pool.query('UPDATE users SET total_points = total_points - 10 WHERE id = ?', [userId]);
+            await pool.query(
+                'UPDATE contest_registrations SET no_submission_penalty_applied = 1 WHERE user_id = ? AND contest_id = ?',
+                [userId, contestId]
+            );
+            penaltyApplied = true;
+        }
+
+        await pool.query(
+            'UPDATE contest_registrations SET final_submitted = 1, final_submitted_at = NOW() WHERE user_id = ? AND contest_id = ?',
+            [userId, contestId]
+        );
+
+        res.json({ success: true, penalty_applied: penaltyApplied });
+    } catch (err) {
+        next(err);
+    }
+}
+
+module.exports = {
+    registerForContest,
+    unregisterFromContest,
+    getMyRegistrations,
+    getRegistrationStatus,
+    finalSubmit,
+};

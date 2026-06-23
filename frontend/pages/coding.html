@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coding - Contest Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/styles.css" />
+  <script>(function(){var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      overflow: hidden;
+      height: 100vh;
+      font-family: var(--font-body);
+      background: var(--bg-void);
+      color: var(--text-primary);
+    }
+
+    .coding-shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ── Topbar ── */
+    .coding-topbar {
+      display: flex;
+      align-items: center;
+      height: 48px;
+      padding: 0 14px;
+      background: var(--topbar-bg);
+      border-bottom: 1px solid var(--border-subtle);
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .coding-back {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .coding-back:hover { background: var(--bg-panel-raised); color: var(--text-primary); }
+
+    .topbar-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .q-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .q-nav-btn {
+      background: none;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 3px 9px;
+      cursor: pointer;
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1;
+      transition: background 0.15s;
+    }
+    .q-nav-btn:hover:not(:disabled) { background: var(--bg-panel-raised); }
+    .q-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    #q-nav-label {
+      font-family: var(--font-display);
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .q-title-topbar {
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-primary);
+    }
+
+    .coding-topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .runs-badge {
+      font-family: var(--font-display);
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      padding: 3px 8px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+    }
+
+    .pts-badge-topbar {
+      font-family: var(--font-display);
+      font-size: 11px;
+      color: var(--judge-pending);
+      border: 1px solid var(--judge-pending);
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    /* ── Main split layout ── */
+    .coding-main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Left problem panel ── */
+    .c-left {
+      width: 40%;
+      flex-shrink: 0;
+      overflow-y: auto;
+      padding: 24px;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-subtle);
+    }
+
+    /* ── Vertical drag handle ── */
+    .v-drag {
+      width: 5px;
+      background: var(--border-subtle);
+      cursor: col-resize;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .v-drag:hover { background: var(--accent-blue); }
+
+    /* ── Right panel ── */
+    .c-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* ── Editor section ── */
+    .c-editor-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 0 0 60%;
+      background: var(--bg-panel);
+    }
+
+    .editor-topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .lang-chip {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent-blue);
+      border: 1px solid var(--accent-blue);
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.03em;
+    }
+
+    .func-sig-hint {
+      font-family: var(--font-display);
+      font-size: 12px;
+      color: var(--text-faint);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #code-editor {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-panel);
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      font-size: 14px;
+      line-height: 1.65;
+      padding: 14px 18px;
+      border: none;
+      resize: none;
+      outline: none;
+      tab-size: 4;
+      caret-color: var(--accent-blue);
+    }
+
+    /* ── Horizontal drag handle ── */
+    .h-drag {
+      height: 5px;
+      background: var(--border-subtle);
+      cursor: row-resize;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .h-drag:hover { background: var(--accent-blue); }
+
+    /* ── Results section ── */
+    .c-results-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .result-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .r-tab {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .r-tab:hover { color: var(--text-primary); }
+    .r-tab.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+
+    .r-tab-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+    }
+    .r-tab-content.hidden { display: none; }
+
+    .results-placeholder {
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-align: center;
+      padding-top: 24px;
+    }
+
+    /* ── Problem detail ── */
+    .problem-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+
+    .problem-meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 18px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .difficulty-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .difficulty-badge.easy { background: #dcfce7; color: #166534; }
+    .difficulty-badge.medium { background: #fef9c3; color: #713f12; }
+    .difficulty-badge.hard { background: #fee2e2; color: #991b1b; }
+    [data-theme="dark"] .difficulty-badge.easy { background: #14532d; color: #86efac; }
+    [data-theme="dark"] .difficulty-badge.medium { background: #451a03; color: #fcd34d; }
+    [data-theme="dark"] .difficulty-badge.hard { background: #450a0a; color: #fca5a5; }
+
+    .problem-pts-badge {
+      font-family: var(--font-display);
+      font-size: 11px;
+      color: var(--judge-pending);
+      border: 1px solid var(--judge-pending);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .problem-desc {
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      margin-bottom: 18px;
+    }
+
+    .problem-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-faint);
+      margin-bottom: 8px;
+    }
+
+    .problem-code-block {
+      background: var(--bg-panel-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: var(--font-display);
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 18px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* ── Result display ── */
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .result-summary {
+      font-family: var(--font-display);
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .result-pts {
+      font-family: var(--font-display);
+      font-size: 13px;
+    }
+
+    .error-output {
+      background: var(--judge-reject-bg);
+      border: 1px solid var(--judge-reject);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-top: 12px;
+    }
+
+    .error-output pre {
+      font-family: var(--font-display);
+      font-size: 12px;
+      color: var(--judge-reject);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .test-case-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tc-row {
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .tc-row.pass { border-color: var(--judge-accept); }
+    .tc-row.fail { border-color: var(--judge-reject); }
+
+    .tc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .tc-row.pass .tc-header { background: var(--judge-accept-bg); color: var(--judge-accept); }
+    .tc-row.fail .tc-header { background: var(--judge-reject-bg); color: var(--judge-reject); }
+
+    .tc-detail {
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .tc-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .tc-label {
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 70px;
+      flex-shrink: 0;
+    }
+
+    .tc-line code {
+      font-family: var(--font-display);
+      font-size: 12px;
+      background: var(--bg-panel-raised);
+      padding: 1px 6px;
+      border-radius: 3px;
+      word-break: break-all;
+    }
+
+    /* ── Submission list ── */
+    .sub-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sub-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      background: var(--bg-panel-raised);
+      font-size: 13px;
+    }
+
+    .sub-time {
+      margin-left: auto;
+      color: var(--text-faint);
+      font-size: 12px;
+    }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<div class="coding-shell">
+
+  <!-- Topbar -->
+  <header class="coding-topbar">
+    <a href="#" id="back-link" class="coding-back">&#8592; Back</a>
+    <div class="topbar-divider"></div>
+    <div class="q-nav">
+      <button id="prev-btn" class="q-nav-btn" disabled>&#8592;</button>
+      <span id="q-nav-label">Q1 / 1</span>
+      <button id="next-btn" class="q-nav-btn" disabled>&#8594;</button>
+    </div>
+    <div class="topbar-divider"></div>
+    <span id="q-title-topbar" class="q-title-topbar">Loading...</span>
+    <div class="coding-topbar-right">
+      <span class="runs-badge" id="runs-badge">-- / -- left</span>
+      <span class="pts-badge-topbar" id="pts-badge">10 pts</span>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle theme">☾</button>
+      <button class="btn btn-primary btn-sm" id="submit-btn">Submit</button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <div class="coding-main" id="coding-main">
+
+    <!-- Left: Problem statement -->
+    <div class="c-left" id="c-left">
+      <div id="problem-body">
+        <p class="results-placeholder">Loading problem...</p>
+      </div>
+    </div>
+
+    <!-- Vertical drag -->
+    <div class="v-drag" id="v-drag"></div>
+
+    <!-- Right: Editor + Results -->
+    <div class="c-right" id="c-right">
+
+      <!-- Editor -->
+      <div class="c-editor-wrap" id="c-editor-wrap">
+        <div class="editor-topbar">
+          <span class="lang-chip">Python 3</span>
+          <span class="func-sig-hint" id="func-sig-hint"></span>
+        </div>
+        <textarea
+          id="code-editor"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+        ></textarea>
+      </div>
+
+      <!-- Horizontal drag -->
+      <div class="h-drag" id="h-drag"></div>
+
+      <!-- Results -->
+      <div class="c-results-wrap">
+        <div class="result-tabs">
+          <button class="r-tab active" data-tab="results">Test Results</button>
+          <button class="r-tab" data-tab="submissions">My Submissions</button>
+        </div>
+        <div class="r-tab-content" id="tab-results">
+          <div class="results-placeholder">Submit your code to see test results.</div>
+        </div>
+        <div class="r-tab-content hidden" id="tab-submissions">
+          <div class="results-placeholder">No submissions yet.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  Auth.requireAuth();
+
+  const params = new URLSearchParams(window.location.search);
+  const contestId = params.get('contest');
+  let questionId = params.get('question');
+  let questions = [];
+  let currentIndex = 0;
+
+  // ── localStorage code persistence ──
+  function codeKey(qId) { return `code_${contestId}_${qId}`; }
+  function loadSavedCode(qId) { return localStorage.getItem(codeKey(qId)); }
+  function saveCode(qId, code) { localStorage.setItem(codeKey(qId), code); }
+
+  // ── Solved state (per question, persisted in localStorage) ──
+  function solvedKey(qId) { return `solved_${contestId}_${qId}`; }
+  function isSolved(qId) { return localStorage.getItem(solvedKey(qId)) === '1'; }
+  function markSolved(qId) { localStorage.setItem(solvedKey(qId), '1'); }
+
+  // ── Lock state (set when contest is final-submitted) ──
+  let finalSubmitted = false;
+
+  function updateSubmitBtn(qId) {
+    const btn = document.getElementById('submit-btn');
+    const editor = document.getElementById('code-editor');
+    if (finalSubmitted) {
+      btn.disabled = true;
+      btn.textContent = 'Contest submitted';
+      editor.readOnly = true;
+      editor.style.opacity = '0.6';
+    } else if (isSolved(qId)) {
+      btn.disabled = true;
+      btn.textContent = 'Accepted ✓';
+      btn.style.background = 'var(--judge-accept)';
+      btn.style.borderColor = 'var(--judge-accept)';
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Submit';
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      editor.readOnly = false;
+      editor.style.opacity = '';
+    }
+  }
+
+  // ── Tab switching ──
+  document.querySelectorAll('.r-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.r-tab').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.r-tab-content').forEach((c) => c.classList.add('hidden'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+      if (btn.dataset.tab === 'submissions') renderSubmissions();
+    });
+  });
+
+  // ── Drag: vertical (left/right) ──
+  const vDrag = document.getElementById('v-drag');
+  const cLeft = document.getElementById('c-left');
+  const codingMain = document.getElementById('coding-main');
+  let draggingV = false;
+  vDrag.addEventListener('mousedown', (e) => {
+    draggingV = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!draggingV) return;
+    const rect = codingMain.getBoundingClientRect();
+    const pct = Math.min(Math.max(((e.clientX - rect.left) / rect.width) * 100, 20), 75);
+    cLeft.style.width = pct + '%';
+  });
+  document.addEventListener('mouseup', () => {
+    draggingV = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+
+  // ── Drag: horizontal (editor/results) ──
+  const hDrag = document.getElementById('h-drag');
+  const editorWrap = document.getElementById('c-editor-wrap');
+  const cRight = document.getElementById('c-right');
+  let draggingH = false;
+  hDrag.addEventListener('mousedown', (e) => {
+    draggingH = true;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!draggingH) return;
+    const rect = cRight.getBoundingClientRect();
+    const pct = Math.min(Math.max(((e.clientY - rect.top) / rect.height) * 100, 20), 80);
+    editorWrap.style.flex = 'none';
+    editorWrap.style.height = pct + '%';
+  });
+  document.addEventListener('mouseup', () => {
+    draggingH = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+
+  // ── Tab key in editor ──
+  document.getElementById('code-editor').addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const ta = e.target;
+      const start = ta.selectionStart;
+      ta.value = ta.value.substring(0, start) + '    ' + ta.value.substring(ta.selectionEnd);
+      ta.selectionStart = ta.selectionEnd = start + 4;
+      saveCode(questionId, ta.value);
+    }
+  });
+
+  document.getElementById('code-editor').addEventListener('input', () => {
+    saveCode(questionId, document.getElementById('code-editor').value);
+  });
+
+  // ── Navigation ──
+  document.getElementById('prev-btn').addEventListener('click', () => {
+    if (currentIndex > 0) navigateTo(currentIndex - 1);
+  });
+  document.getElementById('next-btn').addEventListener('click', () => {
+    if (currentIndex < questions.length - 1) navigateTo(currentIndex + 1);
+  });
+
+  function navigateTo(index) {
+    currentIndex = index;
+    const q = questions[index];
+    questionId = String(q.id);
+    const url = new URL(window.location);
+    url.searchParams.set('question', q.id);
+    window.history.pushState({}, '', url);
+    renderQuestion(q);
+    document.getElementById('tab-results').innerHTML = '<div class="results-placeholder">Submit your code to see test results.</div>';
+    document.getElementById('tab-submissions').innerHTML = '<div class="results-placeholder">No submissions yet.</div>';
+    document.querySelectorAll('.r-tab').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.r-tab-content').forEach((c) => c.classList.add('hidden'));
+    document.querySelector('.r-tab[data-tab="results"]').classList.add('active');
+    document.getElementById('tab-results').classList.remove('hidden');
+  }
+
+  // ── Render question ──
+  function renderQuestion(q) {
+    document.getElementById('q-title-topbar').textContent = q.title;
+    document.getElementById('pts-badge').textContent = q.points + ' pts';
+    document.getElementById('q-nav-label').textContent = `Q${currentIndex + 1} / ${questions.length}`;
+    document.getElementById('prev-btn').disabled = currentIndex === 0;
+    document.getElementById('next-btn').disabled = currentIndex === questions.length - 1;
+    updateSubmitBtn(q.id);
+
+    if (q.function_signature) {
+      document.getElementById('func-sig-hint').textContent = 'def ' + q.function_signature;
+    } else {
+      document.getElementById('func-sig-hint').textContent = '';
+    }
+
+    // Editor default
+    const saved = loadSavedCode(q.id);
+    if (saved) {
+      document.getElementById('code-editor').value = saved;
+    } else {
+      const sig = q.function_signature || 'solution()';
+      document.getElementById('code-editor').value = `def ${sig}:\n    # Write your solution here\n    pass\n`;
+    }
+
+    // Difficulty badge
+    let diffClass = 'easy';
+    let diffLabel = 'Easy';
+    if (q.points > 20) { diffClass = 'hard'; diffLabel = 'Hard'; }
+    else if (q.points > 10) { diffClass = 'medium'; diffLabel = 'Medium'; }
+
+    let bodyHtml = `
+      <div class="problem-title">${escapeHtml(q.title)}</div>
+      <div class="problem-meta">
+        <span class="difficulty-badge ${diffClass}">${diffLabel}</span>
+        <span class="problem-pts-badge">${q.points} pts</span>
+      </div>
+      <div class="problem-desc">${escapeHtml(q.description)}</div>`;
+
+    if (q.input_data) {
+      bodyHtml += `
+        <div class="problem-section-label">Example</div>
+        <div class="problem-code-block">${escapeHtml(q.input_data)}</div>`;
+    }
+
+    if (q.function_signature) {
+      bodyHtml += `
+        <div class="problem-section-label">Function Signature</div>
+        <div class="problem-code-block">def ${escapeHtml(q.function_signature)}</div>`;
+    }
+
+    document.getElementById('problem-body').innerHTML = bodyHtml;
+    loadCounter();
+  }
+
+  // ── Counter ──
+  async function loadCounter() {
+    try {
+      const { remaining, limit } = await Api.getSubmissionLimit(contestId);
+      const el = document.getElementById('runs-badge');
+      el.textContent = `${remaining} / ${limit} left`;
+      el.style.color = remaining <= Math.max(1, Math.floor(limit * 0.2)) ? 'var(--judge-reject)' : '';
+    } catch {}
+  }
+
+  // ── My submissions for this question ──
+  async function renderSubmissions() {
+    const el = document.getElementById('tab-submissions');
+    try {
+      const subs = await Api.getMySubmissions(contestId);
+      const qSubs = subs.filter((s) => String(s.question_id) === String(questionId));
+      if (qSubs.length === 0) {
+        el.innerHTML = '<div class="results-placeholder">No submissions for this question yet.</div>';
+        return;
+      }
+      el.innerHTML = `<div class="sub-list">${qSubs.map((s) => `
+        <div class="sub-item">
+          <span class="status-pill ${s.is_correct ? 'correct' : 'incorrect'}">${s.is_correct ? 'Accepted' : 'Wrong'}</span>
+          <span style="font-family:var(--font-display);font-size:12px;">${s.points_awarded} pts</span>
+          <span class="sub-time">${formatDateTime(s.created_at)}</span>
+        </div>`).join('')}
+      </div>`;
+    } catch {
+      el.innerHTML = '<div class="results-placeholder" style="color:var(--judge-reject)">Failed to load submissions.</div>';
+    }
+  }
+
+  // ── Submit ──
+  document.getElementById('submit-btn').addEventListener('click', async () => {
+    const code = document.getElementById('code-editor').value.trim();
+    if (!code) return;
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Running...';
+
+    // Switch to results tab
+    document.querySelectorAll('.r-tab').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.r-tab-content').forEach((c) => c.classList.add('hidden'));
+    document.querySelector('.r-tab[data-tab="results"]').classList.add('active');
+    const resultsEl = document.getElementById('tab-results');
+    resultsEl.classList.remove('hidden');
+    resultsEl.innerHTML = '<div class="results-placeholder">Running on test cases...</div>';
+
+    try {
+      const res = await Api.submitCode(contestId, questionId, code);
+      loadCounter();
+
+      if (res.compile_error) {
+        resultsEl.innerHTML = `
+          <div class="result-header">
+            <span class="status-pill incorrect">Compile Error</span>
+            <span class="result-summary" style="color:var(--judge-reject)">-1 pt penalty</span>
+          </div>
+          <div class="error-output"><pre>${escapeHtml(res.compile_error)}</pre></div>`;
+        updateSubmitBtn(questionId);
+        return;
+      }
+
+      const passed = res.test_results.filter((r) => r.passed).length;
+      const total = res.test_results.length;
+
+      if (res.is_correct) {
+        markSolved(questionId);
+      }
+
+      resultsEl.innerHTML = `
+        <div class="result-header">
+          <span class="status-pill ${res.is_correct ? 'correct' : 'incorrect'}">${res.is_correct ? 'Accepted' : 'Wrong Answer'}</span>
+          <span class="result-summary">${passed}/${total} test cases passed</span>
+          <span class="result-pts" style="color:${res.is_correct ? 'var(--judge-accept)' : 'var(--judge-reject)'}">
+            ${res.is_correct ? '+' + res.points_awarded + ' pts' : '−1 pt penalty'}
+          </span>
+        </div>
+        <div class="test-case-list">
+          ${res.test_results.map((r, i) => `
+            <div class="tc-row ${r.passed ? 'pass' : 'fail'}">
+              <div class="tc-header">
+                <span>${r.passed ? '✓' : '✗'} Test case ${i + 1}</span>
+                <span>${r.passed ? 'Passed' : 'Failed'}</span>
+              </div>
+              ${!r.passed ? `
+              <div class="tc-detail">
+                <div class="tc-line">
+                  <span class="tc-label">Input:</span>
+                  <code>${escapeHtml(JSON.stringify(r.args))}</code>
+                </div>
+                <div class="tc-line">
+                  <span class="tc-label">Expected:</span>
+                  <code>${escapeHtml(JSON.stringify(r.expected))}</code>
+                </div>
+                <div class="tc-line">
+                  <span class="tc-label">Got:</span>
+                  <code>${r.error ? escapeHtml(r.error) : escapeHtml(JSON.stringify(r.got))}</code>
+                </div>
+              </div>` : ''}
+            </div>`).join('')}
+        </div>`;
+
+      updateSubmitBtn(questionId);
+    } catch (err) {
+      // If backend says already solved, sync localStorage so button stays disabled
+      if (err.status === 400 && err.message && err.message.includes('already solved')) {
+        markSolved(questionId);
+      }
+      resultsEl.innerHTML = `<div class="results-placeholder" style="color:var(--judge-reject)">${escapeHtml(err.message)}</div>`;
+      updateSubmitBtn(questionId);
+    }
+  });
+
+  // ── Back link ──
+  document.getElementById('back-link').href = `contest-detail.html?id=${contestId}`;
+
+  // ── Init ──
+  async function init() {
+    if (!contestId) {
+      document.body.innerHTML = '<p style="padding:32px;color:var(--judge-reject)">No contest specified.</p>';
+      return;
+    }
+    try {
+      const [allQuestions, regStatus] = await Promise.all([
+        Api.listQuestionsForStudent(contestId),
+        Api.getRegistrationStatus(contestId),
+      ]);
+
+      if (regStatus.final_submitted) {
+        finalSubmitted = true;
+        // Show read-only banner under topbar
+        const banner = document.createElement('div');
+        banner.style.cssText = 'background:var(--judge-accept-bg);border-bottom:1px solid var(--judge-accept);color:var(--judge-accept);font-size:13px;font-weight:500;padding:7px 16px;text-align:center;flex-shrink:0;';
+        banner.textContent = 'You have final submitted this contest. Editor is read-only.';
+        document.querySelector('.coding-shell').insertBefore(banner, document.querySelector('.coding-main'));
+      }
+
+      const pythonQs = allQuestions.filter((q) => q.language === 'python');
+      if (pythonQs.length === 0) {
+        document.body.innerHTML = '<p style="padding:32px;color:var(--text-secondary)">No coding questions in this contest.</p>';
+        return;
+      }
+      questions = pythonQs;
+
+      const qIdNum = Number(questionId);
+      currentIndex = questions.findIndex((q) => q.id === qIdNum);
+      if (currentIndex < 0) currentIndex = 0;
+      questionId = String(questions[currentIndex].id);
+      renderQuestion(questions[currentIndex]);
+    } catch (err) {
+      document.body.innerHTML = `<p style="padding:32px;color:var(--judge-reject)">${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

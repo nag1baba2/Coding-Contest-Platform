@@ -67,9 +67,6 @@ const Api = {
         body: body ? JSON.stringify(body) : undefined,
       });
     } catch (networkErr) {
-      // Server unreachable (not running, wrong port, CORS, etc.) -
-      // distinguish this from a normal API error response so the UI
-      // can show a clearer message than "undefined error".
       throw new ApiError(
         'Could not reach the server. Is the backend running on port 5000?',
         0
@@ -80,8 +77,7 @@ const Api = {
     try {
       data = await response.json();
     } catch (parseErr) {
-      // Empty or non-JSON body - fine for some responses, but if the
-      // request also failed, we still need *a* message to show.
+      // Empty or non-JSON body
     }
 
     if (!response.ok) {
@@ -145,11 +141,18 @@ const Api = {
     return this.request(`/questions/${id}`, { method: 'DELETE' });
   },
 
-  // Submissions
+  // Submissions (text answer)
   submitAnswer(contestId, questionId, submittedAnswer) {
     return this.request(`/submissions/contest/${contestId}`, {
       method: 'POST',
       body: { question_id: questionId, submitted_answer: submittedAnswer },
+    });
+  },
+  // Submissions (Python code)
+  submitCode(contestId, questionId, code) {
+    return this.request(`/submissions/code/contest/${contestId}`, {
+      method: 'POST',
+      body: { question_id: questionId, code },
     });
   },
   getMySubmissions(contestId) {
@@ -179,6 +182,9 @@ const Api = {
   },
   unregisterFromContest(contestId) {
     return this.request(`/registrations/contest/${contestId}`, { method: 'DELETE' });
+  },
+  finalSubmit(contestId) {
+    return this.request(`/registrations/contest/${contestId}/final-submit`, { method: 'POST' });
   },
 
   // Submission limit

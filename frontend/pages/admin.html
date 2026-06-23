@@ -131,7 +131,7 @@
   </div>
 
   <div class="modal-overlay hidden" id="question-modal-overlay">
-    <div class="modal">
+    <div class="modal" style="max-width:560px;">
       <h2 id="question-modal-title">Add problem</h2>
       <form id="question-form">
         <input type="hidden" id="question-form-id" />
@@ -145,12 +145,34 @@
           <textarea id="question-description" style="font-family: var(--font-body);" required></textarea>
         </div>
         <div class="field">
-          <label for="question-input">Input (optional, shown to students)</label>
+          <label for="question-input">Input / Example (optional, shown to students)</label>
           <textarea id="question-input"></textarea>
         </div>
         <div class="field">
-          <label for="question-expected">Expected output (the answer key - never shown to students)</label>
-          <textarea id="question-expected" required></textarea>
+          <label for="question-language">Question type</label>
+          <select id="question-language">
+            <option value="text">Text answer</option>
+            <option value="python">Python coding</option>
+          </select>
+        </div>
+        <!-- Text-only fields -->
+        <div id="text-fields">
+          <div class="field">
+            <label for="question-expected">Expected output (answer key — never shown to students)</label>
+            <textarea id="question-expected"></textarea>
+          </div>
+        </div>
+        <!-- Python-only fields -->
+        <div id="python-fields" class="hidden">
+          <div class="field">
+            <label for="question-func-sig">Function signature <span style="color:var(--text-faint);font-size:12px;">(e.g. <code>twoSum(nums, target)</code>)</span></label>
+            <input type="text" id="question-func-sig" placeholder="solution()" />
+          </div>
+          <div class="field">
+            <label>Test cases <span style="color:var(--text-faint);font-size:12px;">(args and expected as JSON values)</span></label>
+            <div id="test-cases-container" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <button type="button" class="btn btn-secondary btn-sm" id="add-tc-btn" style="margin-top:8px;">+ Add test case</button>
+          </div>
         </div>
         <div class="field">
           <label for="question-points">Points</label>
@@ -538,10 +560,81 @@
     const questionModalOverlay = document.getElementById('question-modal-overlay');
     const questionForm = document.getElementById('question-form');
     const questionFormError = document.getElementById('question-form-error');
+    const langSelect = document.getElementById('question-language');
+    const textFields = document.getElementById('text-fields');
+    const pythonFields = document.getElementById('python-fields');
+    const tcContainer = document.getElementById('test-cases-container');
 
+    // ── Language selector toggle ──
+    langSelect.addEventListener('change', () => {
+      const isPython = langSelect.value === 'python';
+      textFields.classList.toggle('hidden', isPython);
+      pythonFields.classList.toggle('hidden', !isPython);
+      document.getElementById('question-expected').required = !isPython;
+    });
+
+    // ── Test case builder ──
+    function renderTestCase(index, argsVal = '', expectedVal = '') {
+      const div = document.createElement('div');
+      div.className = 'tc-entry';
+      div.dataset.index = index;
+      div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:start;background:var(--bg-panel-raised);border:1px solid var(--border-subtle);border-radius:6px;padding:10px 12px;';
+      div.innerHTML = `
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text-faint);margin-bottom:4px;">ARGS (JSON array)</div>
+          <input type="text" class="tc-args" placeholder='[nums, target]' value="${escapeHtml(argsVal)}"
+            style="width:100%;font-family:var(--font-display);font-size:12px;" />
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text-faint);margin-bottom:4px;">EXPECTED (JSON value)</div>
+          <input type="text" class="tc-expected" placeholder='[0, 1]' value="${escapeHtml(expectedVal)}"
+            style="width:100%;font-family:var(--font-display);font-size:12px;" />
+        </div>
+        <button type="button" class="btn btn-danger btn-sm remove-tc-btn" style="margin-top:18px;">✕</button>`;
+      div.querySelector('.remove-tc-btn').addEventListener('click', () => {
+        div.remove();
+        reindexTestCases();
+      });
+      return div;
+    }
+
+    function reindexTestCases() {
+      tcContainer.querySelectorAll('.tc-entry').forEach((el, i) => { el.dataset.index = i; });
+    }
+
+    function addTestCase(argsVal = '', expectedVal = '') {
+      const count = tcContainer.querySelectorAll('.tc-entry').length;
+      if (count >= 10) return;
+      tcContainer.appendChild(renderTestCase(count, argsVal, expectedVal));
+    }
+
+    document.getElementById('add-tc-btn').addEventListener('click', () => addTestCase());
+
+    function getTestCasesFromForm() {
+      const entries = tcContainer.querySelectorAll('.tc-entry');
+      const cases = [];
+      const errors = [];
+      entries.forEach((el, i) => {
+        const argsRaw = el.querySelector('.tc-args').value.trim();
+        const expectedRaw = el.querySelector('.tc-expected').value.trim();
+        let args, expected;
+        try { args = JSON.parse(argsRaw); } catch { errors.push(`Test case ${i + 1}: Args is not valid JSON`); return; }
+        try { expected = JSON.parse(expectedRaw); } catch { errors.push(`Test case ${i + 1}: Expected is not valid JSON`); return; }
+        if (!Array.isArray(args)) { errors.push(`Test case ${i + 1}: Args must be a JSON array`); return; }
+        cases.push({ args, expected });
+      });
+      return { cases, errors };
+    }
+
+    // ── Open question modal ──
     function openQuestionModal(contestId, questionId = null) {
       questionFormError.innerHTML = '';
       questionForm.reset();
+      tcContainer.innerHTML = '';
+      langSelect.value = 'text';
+      textFields.classList.remove('hidden');
+      pythonFields.classList.add('hidden');
+      document.getElementById('question-expected').required = true;
       document.getElementById('question-form-contest-id').value = contestId;
       document.getElementById('question-form-id').value = questionId || '';
 
@@ -552,8 +645,23 @@
         document.getElementById('question-title').value = q.title;
         document.getElementById('question-description').value = q.description;
         document.getElementById('question-input').value = q.input_data || '';
-        document.getElementById('question-expected').value = q.expected_output;
         document.getElementById('question-points').value = q.points;
+
+        const lang = q.language || 'text';
+        langSelect.value = lang;
+        if (lang === 'python') {
+          textFields.classList.add('hidden');
+          pythonFields.classList.remove('hidden');
+          document.getElementById('question-expected').required = false;
+          document.getElementById('question-func-sig').value = q.function_signature || '';
+          const tcs = q.test_cases
+            ? (typeof q.test_cases === 'string' ? JSON.parse(q.test_cases) : q.test_cases)
+            : [];
+          tcs.forEach((tc) => addTestCase(JSON.stringify(tc.args), JSON.stringify(tc.expected)));
+          if (tcs.length === 0) addTestCase();
+        } else {
+          document.getElementById('question-expected').value = q.expected_output || '';
+        }
       } else {
         document.getElementById('question-modal-title').textContent = 'Add problem';
         document.getElementById('question-modal-save').textContent = 'Add problem';
@@ -573,14 +681,32 @@
 
       const contestId = document.getElementById('question-form-contest-id').value;
       const questionId = document.getElementById('question-form-id').value;
+      const lang = langSelect.value;
+
       const payload = {
         contest_id: Number(contestId),
         title: document.getElementById('question-title').value.trim(),
         description: document.getElementById('question-description').value.trim(),
         input_data: document.getElementById('question-input').value.trim(),
-        expected_output: document.getElementById('question-expected').value.trim(),
         points: Number(document.getElementById('question-points').value),
+        language: lang,
       };
+
+      if (lang === 'python') {
+        payload.function_signature = document.getElementById('question-func-sig').value.trim();
+        const { cases, errors } = getTestCasesFromForm();
+        if (errors.length > 0) {
+          questionFormError.innerHTML = `<div class="alert alert-error">${escapeHtml(errors[0])}</div>`;
+          return;
+        }
+        if (cases.length === 0) {
+          questionFormError.innerHTML = `<div class="alert alert-error">Add at least one test case.</div>`;
+          return;
+        }
+        payload.test_cases = cases;
+      } else {
+        payload.expected_output = document.getElementById('question-expected').value.trim();
+      }
 
       try {
         if (questionId) {
@@ -596,6 +722,7 @@
         await refreshProblemsList();
         questionModalOverlay.classList.add('hidden');
         questionForm.reset();
+        tcContainer.innerHTML = '';
       } catch (err) {
         questionFormError.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
       }

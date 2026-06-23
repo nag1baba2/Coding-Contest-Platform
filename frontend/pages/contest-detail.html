@@ -46,11 +46,25 @@
 
       <div id="contest-body" class="hidden">
         <div id="submissions-counter" class="submissions-counter hidden">
-          <span>Submissions remaining</span>
+          <span>Runs &amp; submissions left</span>
           <span class="counter-value" id="counter-value">—</span>
         </div>
         <div class="section-title">Problems</div>
         <div id="problem-list"></div>
+
+        <!-- Final Submit -->
+        <div id="final-submit-section" style="margin-top: 24px; margin-bottom: 24px;">
+          <div class="panel" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;">
+            <div>
+              <div style="font-weight:600;font-size:14px;">Final Submit</div>
+              <div style="color:var(--text-secondary);font-size:13px;margin-top:2px;">
+                Lock in your solutions. <strong style="color:var(--judge-reject);">−10 pts penalty</strong> if you haven't submitted anything.
+              </div>
+            </div>
+            <button class="btn btn-primary" id="final-submit-btn">Final Submit</button>
+          </div>
+          <div id="final-submit-status" class="hidden" style="padding:12px 20px;background:var(--judge-accept-bg);border:1px solid var(--judge-accept);border-radius:8px;margin-top:8px;color:var(--judge-accept);font-size:13px;"></div>
+        </div>
 
         <div class="mt-6 flex-between">
           <div class="section-title" style="margin-bottom: 0;">Leaderboard</div>
@@ -107,9 +121,7 @@
 
     let stopTimer = null;
     let leaderboardRefreshInterval = null;
-    let mySubmissionsByQuestion = {}; // question_id -> latest submission
-
-    // wrongCountByQuestion[question_id] = number of wrong submissions
+    let mySubmissionsByQuestion = {};
     let wrongCountByQuestion = {};
 
     async function loadMySubmissions() {
@@ -118,16 +130,14 @@
         mySubmissionsByQuestion = {};
         wrongCountByQuestion = {};
         for (const s of subs) {
-          // Latest submission per question (API is newest-first)
           if (!(s.question_id in mySubmissionsByQuestion)) {
             mySubmissionsByQuestion[s.question_id] = s;
           }
-          // Count wrong submissions per question
           if (!s.is_correct) {
             wrongCountByQuestion[s.question_id] = (wrongCountByQuestion[s.question_id] || 0) + 1;
           }
         }
-      } catch (err) {
+      } catch {
         mySubmissionsByQuestion = {};
         wrongCountByQuestion = {};
       }
@@ -137,7 +147,7 @@
       try {
         const { remaining, limit } = await Api.getSubmissionLimit(contestId);
         updateCounter(remaining, limit);
-      } catch (err) { /* non-fatal */ }
+      } catch { /* non-fatal */ }
     }
 
     function updateCounter(remaining, limit) {
@@ -159,60 +169,79 @@
           return;
         }
 
-        listEl.innerHTML = questions
-          .map((q) => {
-            const lastSub = mySubmissionsByQuestion[q.id];
-            const wrongCount = wrongCountByQuestion[q.id] || 0;
-            const earnedPts = lastSub && lastSub.is_correct ? Math.max(0, q.points - wrongCount) : 0;
+        listEl.innerHTML = questions.map((q) => {
+          const lastSub = mySubmissionsByQuestion[q.id];
+          const wrongCount = wrongCountByQuestion[q.id] || 0;
+          const earnedPts = lastSub && lastSub.is_correct ? Math.max(0, q.points - wrongCount) : 0;
+          const statusHtml = lastSub
+            ? `<span class="status-pill ${lastSub.is_correct ? 'correct' : 'incorrect'}">${lastSub.is_correct ? 'Accepted' : 'Wrong Answer'}</span>`
+            : '';
+          const scoreHtml = lastSub
+            ? `<span style="font-family:var(--font-display);font-size:12px;color:${lastSub.is_correct ? 'var(--judge-accept)' : 'var(--judge-reject)'};">${earnedPts} / ${q.points} pts</span>`
+            : '';
 
-            const statusHtml = lastSub
-              ? `<span class="status-pill ${lastSub.is_correct ? 'correct' : 'incorrect'}">${lastSub.is_correct ? 'Accepted' : 'Wrong Answer'}</span>`
-              : '';
-            const scoreHtml = lastSub
-              ? `<span style="font-family:var(--font-display);font-size:12px;color:${lastSub.is_correct ? 'var(--judge-accept)' : 'var(--judge-reject)'};">${earnedPts} / ${q.points} pts</span>`
-              : '';
-
+          if (q.language === 'python') {
+            // Python questions → link to coding page
             return `
-            <div class="panel problem-panel" data-question-id="${q.id}">
-              <div class="problem-header">
-                <h3 style="user-select:none;">${escapeHtml(q.title)}</h3>
-                <div style="display:flex; gap:8px; align-items:center;">
-                  ${statusHtml}
-                  ${scoreHtml}
-                  ${difficultyBadge(q.points)}
-                  <span class="points-badge">${q.points} pts</span>
+            <div class="panel problem-panel" data-question-id="${q.id}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;">
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                  <h3 style="font-size:15px;">${escapeHtml(q.title)}</h3>
+                  <span class="lang-tag-python">Python</span>
                 </div>
+                <p style="color:var(--text-secondary);font-size:13px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(q.description)}</p>
               </div>
-              <p style="color:var(--text-secondary);margin-bottom:12px;user-select:none;">${escapeHtml(q.description)}</p>
-              ${q.input_data
-                ? `<div class="problem-section"><div class="label">Input</div><div class="code-block" style="user-select:none;">${escapeHtml(q.input_data)}</div></div>`
-                : ''}
-              ${wrongCount > 0 ? `<p style="font-size:12px;color:var(--judge-reject);margin-bottom:8px;">⚠ ${wrongCount} wrong attempt${wrongCount > 1 ? 's' : ''} (−${wrongCount} pts penalty)</p>` : ''}
-              <div class="submit-row">
-                <input
-                  type="text"
-                  placeholder="Your answer, e.g. [0,1]"
-                  class="submit-input"
-                  value="${lastSub ? escapeHtml(lastSub.submitted_answer) : ''}"
-                />
-                <button class="btn btn-primary submit-btn">Submit</button>
+              <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+                ${statusHtml}
+                ${scoreHtml}
+                ${difficultyBadge(q.points)}
+                <span class="points-badge">${q.points} pts</span>
+                <a class="btn btn-primary btn-sm" href="coding.html?contest=${contestId}&question=${q.id}">Solve →</a>
               </div>
-              <div class="submit-result" style="margin-top: 8px;"></div>
             </div>`;
-          })
-          .join('');
+          }
 
-        // Wire up submit buttons after rendering.
+          // Text answer questions (existing inline form)
+          return `
+          <div class="panel problem-panel" data-question-id="${q.id}">
+            <div class="problem-header">
+              <h3 style="user-select:none;">${escapeHtml(q.title)}</h3>
+              <div style="display:flex; gap:8px; align-items:center;">
+                ${statusHtml}
+                ${scoreHtml}
+                ${difficultyBadge(q.points)}
+                <span class="points-badge">${q.points} pts</span>
+              </div>
+            </div>
+            <p style="color:var(--text-secondary);margin-bottom:12px;user-select:none;">${escapeHtml(q.description)}</p>
+            ${q.input_data
+              ? `<div class="problem-section"><div class="label">Input</div><div class="code-block" style="user-select:none;">${escapeHtml(q.input_data)}</div></div>`
+              : ''}
+            ${wrongCount > 0 ? `<p style="font-size:12px;color:var(--judge-reject);margin-bottom:8px;">⚠ ${wrongCount} wrong attempt${wrongCount > 1 ? 's' : ''} (−${wrongCount} pts penalty)</p>` : ''}
+            <div class="submit-row">
+              <input
+                type="text"
+                placeholder="Your answer, e.g. [0,1]"
+                class="submit-input"
+                value="${lastSub ? escapeHtml(lastSub.submitted_answer) : ''}"
+              />
+              <button class="btn btn-primary submit-btn">Submit</button>
+            </div>
+            <div class="submit-result" style="margin-top: 8px;"></div>
+          </div>`;
+        }).join('');
+
+        // Wire up text-question submit buttons
         listEl.querySelectorAll('.problem-panel').forEach((panel) => {
           const questionId = panel.dataset.questionId;
-          const input = panel.querySelector('.submit-input');
           const btn = panel.querySelector('.submit-btn');
+          if (!btn) return;
+          const input = panel.querySelector('.submit-input');
           const resultEl = panel.querySelector('.submit-result');
 
           btn.addEventListener('click', async () => {
             const answer = input.value;
             if (!answer.trim()) return;
-
             btn.disabled = true;
             btn.textContent = 'Submitting...';
             resultEl.innerHTML = '';
@@ -222,12 +251,7 @@
               const pillClass = res.is_correct ? 'correct' : 'incorrect';
               const pillLabel = res.is_correct ? 'Accepted' : 'Wrong Answer';
               resultEl.innerHTML = `<span class="status-pill ${pillClass}">${pillLabel}</span> <span style="color: var(--text-secondary); font-size: 13px;">${res.points_awarded} pts awarded</span>`;
-
-              // Refresh counter from response
-              if (res.submissions_remaining !== undefined) {
-                const limit = res.submissions_remaining + (res.submissions_remaining >= 0 ? 1 : 0);
-                loadSubmissionCounter();
-              }
+              loadSubmissionCounter();
 
               const headerPill = panel.querySelector('.problem-header .status-pill');
               const newPillHtml = `<span class="status-pill ${pillClass}">${pillLabel}</span>`;
@@ -236,7 +260,6 @@
               } else {
                 panel.querySelector('.problem-header > div').insertAdjacentHTML('afterbegin', newPillHtml);
               }
-
               loadLeaderboard();
             } catch (err) {
               resultEl.innerHTML = `<span style="color: var(--judge-reject); font-size: 13px;">${escapeHtml(err.message)}</span>`;
@@ -247,9 +270,6 @@
           });
         });
       } catch (err) {
-        // Most commonly a 403 from requireActiveContest (not started /
-        // ended) - that's handled by renderLockedState below, this
-        // catch is for anything else (network error, 404, etc.)
         if (err.status !== 403) {
           showAlert(alertBox, err.message);
         }
@@ -265,21 +285,52 @@
           return;
         }
         const medalClass = (rank) => (rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '');
-        tbody.innerHTML = rows
-          .map(
-            (r) => `
+        tbody.innerHTML = rows.map((r) => `
           <tr class="${r.student_id === user.id ? 'leaderboard-own-row' : ''}">
             <td class="rank-cell ${medalClass(r.rank)}">#${r.rank}</td>
             <td>${escapeHtml(r.student_name)}${r.student_id === user.id ? ' <span style="color:var(--accent-blue);font-size:12px;">(you)</span>' : ''}</td>
             <td class="score-cell">${r.total_score}</td>
             <td style="color: var(--text-secondary); font-size: 13px;">${r.last_submission_time ? formatDateTime(r.last_submission_time) : '-'}</td>
-          </tr>
-        `
-          )
-          .join('');
+          </tr>`).join('');
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="4" style="color: var(--judge-reject)">${escapeHtml(err.message)}</td></tr>`;
       }
+    }
+
+    // ── Final Submit ──
+    async function setupFinalSubmit(regStatus) {
+      const btn = document.getElementById('final-submit-btn');
+      const statusEl = document.getElementById('final-submit-status');
+
+      if (regStatus.final_submitted) {
+        btn.disabled = true;
+        btn.textContent = 'Submitted ✓';
+        btn.classList.replace('btn-primary', 'btn-secondary');
+        statusEl.classList.remove('hidden');
+        statusEl.textContent = `Final submitted at ${formatDateTime(regStatus.final_submitted_at)}`;
+        return;
+      }
+
+      btn.addEventListener('click', async () => {
+        const confirmed = window.confirm('Final submit your contest? This is irreversible. If you have made no submissions you will receive a −10 point penalty.');
+        if (!confirmed) return;
+
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+        try {
+          const res = await Api.finalSubmit(contestId);
+          btn.textContent = 'Submitted ✓';
+          btn.classList.replace('btn-primary', 'btn-secondary');
+          statusEl.classList.remove('hidden');
+          statusEl.textContent = res.penalty_applied
+            ? 'Final submitted. −10 pt penalty applied (no submissions made).'
+            : 'Final submitted successfully. Good luck!';
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = 'Final Submit';
+          showAlert(alertBox, err.message);
+        }
+      });
     }
 
     function renderLockedState(status, contest) {
@@ -306,6 +357,7 @@
       }
 
       document.getElementById('submissions-counter').classList.add('hidden');
+      document.getElementById('final-submit-section').classList.add('hidden');
       bodyEl.classList.add('hidden');
       lockedEl.classList.remove('hidden');
 
@@ -317,6 +369,7 @@
         detail.textContent = 'Submissions are closed. You can still view the leaderboard below.';
         bodyEl.classList.remove('hidden');
         document.getElementById('problem-list').innerHTML = '';
+        document.getElementById('final-submit-section').classList.add('hidden');
         loadLeaderboard();
       }
     }
@@ -336,7 +389,6 @@
           </p>
         `;
 
-        // If upcoming and not registered, show registration prompt instead of timer
         if (contest.status === 'upcoming' && !regStatus.registered) {
           document.getElementById('locked-message').classList.remove('hidden');
           document.getElementById('locked-title').textContent = "You're not registered for this contest";
@@ -345,7 +397,6 @@
           document.getElementById('timer-panel').classList.add('hidden');
         }
 
-        // If active and not registered, block access
         if (contest.status === 'active' && !regStatus.registered) {
           document.getElementById('locked-message').classList.remove('hidden');
           document.getElementById('locked-title').textContent = 'Registration closed';
@@ -353,6 +404,11 @@
             'You did not register before this contest started and cannot participate.';
           document.getElementById('timer-panel').classList.add('hidden');
           return;
+        }
+
+        // Setup Final Submit if registered and contest active
+        if (regStatus.registered) {
+          setupFinalSubmit(regStatus);
         }
 
         const timerPanel = document.getElementById('timer-panel');
@@ -373,5 +429,23 @@
       if (leaderboardRefreshInterval) clearInterval(leaderboardRefreshInterval);
     });
   </script>
+
+  <style>
+    .lang-tag-python {
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    [data-theme="dark"] .lang-tag-python {
+      background: #1e3a5f;
+      color: #93c5fd;
+    }
+  </style>
 </body>
 </html>
