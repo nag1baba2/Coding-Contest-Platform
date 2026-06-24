@@ -3,7 +3,11 @@
 // Every page includes this file before its own page-specific script.
 // ============================================================
 
-const API_BASE = '/api';
+// 5500/5501 = VS Code Live Server, 8080 = Python http.server (CI) → hit backend directly.
+// Any other origin = served by Express itself (production) → use relative path.
+const API_BASE = (['5500', '5501', '8080'].includes(window.location.port))
+    ? 'http://localhost:5000/api'
+    : '/api';
 
 const Auth = {
   getToken() {
